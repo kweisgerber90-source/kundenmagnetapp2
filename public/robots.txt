@@ -1,0 +1,19 @@
+// app/robots.txt
+User-agent: *
+Allow: /
+
+Sitemap: https://kundenmagnet-app.de/sitemap.xml
+
+# Disallow admin areas
+Disallow: /app/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+
+# Allow widget endpoints
+Allow: /api/widget
+Allow: /widget/
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1

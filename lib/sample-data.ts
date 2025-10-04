@@ -1,0 +1,85 @@
+// lib/sample-data.ts
+export const SAMPLE_TESTIMONIALS = [
+  {
+    id: '1',
+    name: 'Maria Schmidt',
+    text: 'Absolut begeistert! Der Service ist erstklassig und das Team immer hilfsbereit. Kann ich nur weiterempfehlen!',
+    rating: 5,
+    date: '2024-01-15',
+    verified: true,
+    company: 'Schmidt GmbH',
+  },
+  {
+    id: '2',
+    name: 'Thomas Weber',
+    text: 'Endlich eine Lösung, die wirklich funktioniert! Die Einrichtung war kinderleicht und der Support antwortet super schnell.',
+    rating: 5,
+    date: '2024-01-10',
+    verified: true,
+  },
+  {
+    id: '3',
+    name: 'Julia Müller',
+    text: 'Wir nutzen das Tool seit 3 Monaten und haben schon über 100 Bewertungen gesammelt. Die QR-Code Funktion ist genial!',
+    rating: 5,
+    date: '2024-01-08',
+    verified: true,
+    company: 'Café Müller',
+  },
+  {
+    id: '4',
+    name: 'Michael Becker',
+    text: 'Sehr zufrieden mit dem Preis-Leistungs-Verhältnis. Das Widget sieht professionell aus und lässt sich perfekt anpassen.',
+    rating: 4,
+    date: '2024-01-05',
+    verified: true,
+  },
+  {
+    id: '5',
+    name: 'Sandra Koch',
+    text: 'Die automatische Moderation spart uns viel Zeit. Spam wird zuverlässig gefiltert und echte Bewertungen kommen durch.',
+    rating: 5,
+    date: '2024-01-03',
+    verified: true,
+    company: 'Koch & Partner',
+  },
+  {
+    id: '6',
+    name: 'Andreas Fischer',
+    text: 'Top! DSGVO-konform und Server in Deutschland waren für uns die Hauptgründe. Läuft seit Tag 1 problemlos.',
+    rating: 5,
+    date: '2023-12-28',
+    verified: true,
+  },
+]
+
+export const WIDGET_THEMES = {
+  light: {
+    name: 'Hell',
+    background: '#ffffff',
+    text: '#1f2937',
+    border: '#e5e7eb',
+    accent: '#3b82f6',
+  },
+  dark: {
+    name: 'Dunkel',
+    background: '#1f2937',
+    text: '#f9fafb',
+    border: '#374151',
+    accent: '#60a5fa',
+  },
+  minimal: {
+    name: 'Minimal',
+    background: '#fafafa',
+    text: '#171717',
+    border: '#f5f5f5',
+    accent: '#171717',
+  },
+  colorful: {
+    name: 'Bunt',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    text: '#ffffff',
+    border: 'rgba(255,255,255,0.2)',
+    accent: '#ffd700',
+  },
+}
