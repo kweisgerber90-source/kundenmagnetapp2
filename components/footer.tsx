@@ -1,9 +1,17 @@
-// components/footer.tsx (updated with better design)
+// components/footer.tsx
+'use client'
+
 import { BRAND } from '@/lib/constants'
 import { Heart, Mail, MapPin, Phone, Shield, Star } from 'lucide-react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export function Footer() {
+  const pathname = usePathname()
+
+  // Show full contact details only on legal pages
+  const isLegalPage = pathname?.startsWith('/legal/')
+
   return (
     <footer className="border-t border-gray-100 bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 py-12">
@@ -116,36 +124,69 @@ export function Footer() {
           <div>
             <h4 className="mb-4 text-sm font-semibold text-gray-900">Kontakt</h4>
             <ul className="space-y-3 text-sm">
-              <li className="text-gray-600">
-                <div className="font-medium text-gray-900">{BRAND.owner}</div>
-                <div className="text-xs">{BRAND.legalForm}</div>
-              </li>
-              <li className="flex items-start space-x-2 text-gray-600">
-                <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
-                <div>
-                  {BRAND.address.street}
-                  <br />
-                  {BRAND.address.zip} {BRAND.address.city}
-                </div>
-              </li>
-              <li>
-                <a
-                  href={`mailto:${BRAND.email.support}`}
-                  className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-blue-600"
-                >
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span className="text-xs">{BRAND.email.support}</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href={`tel:${BRAND.phone}`}
-                  className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-blue-600"
-                >
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <span className="text-xs">{BRAND.phone}</span>
-                </a>
-              </li>
+              {isLegalPage ? (
+                // Full contact details on legal pages only
+                <>
+                  <li className="text-gray-600">
+                    <div className="font-medium text-gray-900">{BRAND.owner}</div>
+                    <div className="text-xs">{BRAND.legalForm}</div>
+                  </li>
+                  <li className="flex items-start space-x-2 text-gray-600">
+                    <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
+                    <div>
+                      {BRAND.address.street}
+                      <br />
+                      {BRAND.address.zip} {BRAND.address.city}
+                    </div>
+                  </li>
+                  <li>
+                    <a
+                      href={`mailto:${BRAND.email.support}`}
+                      className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-blue-600"
+                    >
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="text-xs">{BRAND.email.support}</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href={`tel:${BRAND.phone}`}
+                      className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-blue-600"
+                    >
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <span className="text-xs">{BRAND.phone}</span>
+                    </a>
+                  </li>
+                </>
+              ) : (
+                // Only email on marketing pages
+                <>
+                  <li>
+                    <a
+                      href={`mailto:${BRAND.email.support}`}
+                      className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-blue-600"
+                    >
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">{BRAND.email.support}</span>
+                    </a>
+                  </li>
+                  <li>
+                    <Link
+                      href="/kontakt"
+                      className="inline-flex items-center space-x-1 text-sm text-blue-600 transition-colors hover:text-blue-700"
+                    >
+                      <span>Kontaktformular</span>
+                      <span>→</span>
+                    </Link>
+                  </li>
+                  <li className="text-xs text-gray-500">
+                    Vollständige Kontaktdaten finden Sie im{' '}
+                    <Link href="/legal/impressum" className="underline hover:text-blue-600">
+                      Impressum
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </div>
