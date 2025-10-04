@@ -48,7 +48,10 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Verify installation
+        run: pnpm list --depth=0
 
       - name: Create .env.local for build
         run: |
@@ -78,16 +81,24 @@ jobs:
           EOF
 
       - name: Run TypeScript check
-        run: pnpm typecheck
+        run: |
+          echo "Running TypeScript compilation check..."
+          pnpm typecheck
 
       - name: Run ESLint
-        run: pnpm lint
+        run: |
+          echo "Running ESLint checks..."
+          pnpm lint
 
       - name: Run Prettier check
-        run: pnpm format:check
+        run: |
+          echo "Running Prettier formatting check..."
+          pnpm check
 
       - name: Build application
-        run: pnpm build
+        run: |
+          echo "Building Next.js application..."
+          pnpm build
 
       - name: Upload build artifacts (optional)
         if: matrix.node-version == '20.x'
