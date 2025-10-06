@@ -1,65 +1,72 @@
 // hooks/use-cookie-consent.tsx
 'use client'
 
-import { CookieConsent, getCookieConsent, hasConsent, setCookieConsent } from '@/lib/cookie-consent'
+import { ConsentData, getConsent, hasConsent, saveConsent } from '@/lib/cookie-consent'
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react'
 
 interface CookieConsentContextValue {
-  consent: CookieConsent | null
+  consent: ConsentData | null
   showBanner: boolean
   acceptAll: () => void
   acceptEssential: () => void
-  updateConsent: (consent: Partial<Omit<CookieConsent, 'version' | 'timestamp'>>) => void
+  updateConsent: (updates: Partial<Omit<ConsentData, 'version' | 'timestamp'>>) => void
   hasConsent: (type: 'essential' | 'analytics' | 'marketing') => boolean
 }
 
 const CookieConsentContext = createContext<CookieConsentContextValue | undefined>(undefined)
 
 export function CookieConsentProvider({ children }: { children: ReactNode }) {
-  const [consent, setConsentState] = useState<CookieConsent | null>(null)
+  const [consent, setConsentState] = useState<ConsentData | null>(null)
   const [showBanner, setShowBanner] = useState(false)
 
   useEffect(() => {
-    const stored = getCookieConsent()
+    const stored = getConsent()
     setConsentState(stored)
     setShowBanner(!stored)
   }, [])
 
   const acceptAll = () => {
-    const newConsent = setCookieConsent({
+    const categories = {
       essential: true,
       analytics: true,
       marketing: true,
-      consentText: 'Nutzer hat alle Cookies akzeptiert',
-    })
+    }
+    saveConsent(categories)
+    const newConsent = getConsent()
     setConsentState(newConsent)
     setShowBanner(false)
   }
 
   const acceptEssential = () => {
-    const newConsent = setCookieConsent({
+    const categories = {
       essential: true,
       analytics: false,
       marketing: false,
-      consentText: 'Nutzer hat nur essenzielle Cookies akzeptiert',
-    })
+    }
+    saveConsent(categories)
+    const newConsent = getConsent()
     setConsentState(newConsent)
     setShowBanner(false)
   }
 
-  const updateConsent = (updates: Partial<Omit<CookieConsent, 'version' | 'timestamp'>>) => {
+  const updateConsent = (updates: Partial<Omit<ConsentData, 'version' | 'timestamp'>>) => {
     const current = consent || {
-      essential: true,
-      analytics: false,
-      marketing: false,
-      consentText: '',
+      given: false,
+      categories: {
+        essential: true,
+        analytics: false,
+        marketing: false,
+      },
     }
-    const newConsent = setCookieConsent({
-      ...current,
-      ...updates,
-      consentText:
-        updates.consentText || `Nutzer hat Einstellungen geändert: ${JSON.stringify(updates)}`,
-    })
+
+    const newCategories = {
+      essential: updates.categories?.essential ?? current.categories.essential,
+      analytics: updates.categories?.analytics ?? current.categories.analytics,
+      marketing: updates.categories?.marketing ?? current.categories.marketing,
+    }
+
+    saveConsent(newCategories)
+    const newConsent = getConsent()
     setConsentState(newConsent)
   }
 

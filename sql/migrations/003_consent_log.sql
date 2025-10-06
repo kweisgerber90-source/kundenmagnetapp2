@@ -1,4 +1,4 @@
--- Migration 003: Consent Log für TTDSG-Compliance
+-- Migration 003: Consent Log für TTDSG-Compliance (überarbeitet)
 -- Speichert User-Zustimmungen mit Snapshot und Timestamp
 
 CREATE TABLE IF NOT EXISTS consent_log (
@@ -12,32 +12,27 @@ CREATE TABLE IF NOT EXISTS consent_log (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Index für Abfragen nach user_id
-CREATE INDEX idx_consent_log_user_id ON consent_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_consent_log_user_id ON consent_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_consent_log_created_at ON consent_log(created_at DESC);
 
--- Index für Abfragen nach Zeitstempel
-CREATE INDEX idx_consent_log_created_at ON consent_log(created_at DESC);
-
--- RLS Policies
 ALTER TABLE consent_log ENABLE ROW LEVEL SECURITY;
 
--- Admins können alles sehen (später einschränken auf admin role)
-CREATE POLICY "Admin can view all consent logs"
-  ON consent_log
-  FOR SELECT
-  USING (true);
-
--- Insert nur via Service Role (API)
-CREATE POLICY "Service role can insert consent logs"
-  ON consent_log
-  FOR INSERT
-  WITH CHECK (true);
-
--- Users können ihre eigenen Logs sehen
+-- Users see only their own logs
+DROP POLICY IF EXISTS "Users can view own consent logs" ON consent_log;
 CREATE POLICY "Users can view own consent logs"
   ON consent_log
   FOR SELECT
+  TO authenticated
   USING (auth.uid() = user_id);
+
+-- Allow inserts for everyone (anon & authenticated).
+-- RLS remains enabled, but this policy permits inserts without requiring service key.
+DROP POLICY IF EXISTS "Anyone can insert consent logs" ON consent_log;
+CREATE POLICY "Anyone can insert consent logs"
+  ON consent_log
+  FOR INSERT
+  TO anon, authenticated
+  WITH CHECK (true);
 
 COMMENT ON TABLE consent_log IS 'Logs user consent decisions for TTDSG compliance';
 COMMENT ON COLUMN consent_log.categories IS 'JSON object with category consent: {"analytics": true, "marketing": false}';
