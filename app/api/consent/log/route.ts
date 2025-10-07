@@ -5,12 +5,16 @@ import { NextRequest, NextResponse } from 'next/server'
 export const runtime = 'nodejs'
 export const preferredRegion = ['fra1']
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-)
-
 export async function POST(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing Supabase configuration')
+    return NextResponse.json({ error: 'Service configuration error' }, { status: 500 })
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey)
   try {
     const { categories, consentText, consentGiven } = await request.json()
 

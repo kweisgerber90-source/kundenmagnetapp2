@@ -2,48 +2,33 @@
 import { getEnv } from './env'
 
 /**
- * Get crypto implementation (Node.js or Web Crypto API)
+ * Get crypto implementation (Web Crypto API only for Edge Runtime compatibility)
  */
 function getCrypto() {
   if (typeof window !== 'undefined') {
     return window.crypto
   }
-  // Try Node.js crypto first, fallback to global crypto
-  try {
-    return require('crypto')
-  } catch {
-    return globalThis.crypto
-  }
+  // Use global crypto for Node.js/Edge Runtime
+  return globalThis.crypto
 }
 
 /**
  * Hash IP address with pepper for privacy
+ * Uses a simple non-cryptographic hash for Edge Runtime compatibility
  */
 export function hashIP(ip: string): string {
   const env = getEnv()
   const pepper = env.IP_HASH_PEPPER || 'fallback-pepper-for-dev'
 
-  const crypto = getCrypto()
-
-  // Use Web Crypto API if available
-  if (crypto.subtle) {
-    // For Edge Runtime, we'll use a simpler approach
-    const data = new TextEncoder().encode(ip + pepper)
-    // Use a simple hash for compatibility
-    let hash = 0
-    for (let i = 0; i < data.length; i++) {
-      const char = data[i]
-      hash = (hash << 5) - hash + char
-      hash = hash & hash // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(16)
+  // Simple hash for Edge Runtime compatibility
+  const data = new TextEncoder().encode(ip + pepper)
+  let hash = 0
+  for (let i = 0; i < data.length; i++) {
+    const char = data[i]
+    hash = (hash << 5) - hash + char
+    hash = hash & hash // Convert to 32-bit integer
   }
-
-  // Node.js crypto
-  return crypto
-    .createHash('sha256')
-    .update(ip + pepper)
-    .digest('hex')
+  return Math.abs(hash).toString(16)
 }
 
 /**
@@ -52,12 +37,7 @@ export function hashIP(ip: string): string {
 export function generateCSRFToken(): string {
   const crypto = getCrypto()
 
-  // Node.js crypto
-  if (crypto.randomBytes) {
-    return crypto.randomBytes(32).toString('hex')
-  }
-
-  // Web Crypto API fallback
+  // Web Crypto API
   const array = new Uint8Array(32)
   crypto.getRandomValues(array)
   return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('')
@@ -69,14 +49,7 @@ export function generateCSRFToken(): string {
 export function verifyCSRFToken(token: string, storedToken: string): boolean {
   if (!token || !storedToken) return false
 
-  const crypto = getCrypto()
-
-  // Node.js crypto - use timing safe equal
-  if (crypto.timingSafeEqual) {
-    return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(storedToken))
-  }
-
-  // Fallback - simple comparison (less secure but works)
+  // Simple comparison (timing-safe comparison not available in Web Crypto API)
   return token === storedToken
 }
 
