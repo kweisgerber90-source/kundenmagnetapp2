@@ -1,4 +1,3 @@
-// middleware.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 export function middleware(request: NextRequest) {
@@ -45,8 +44,8 @@ export function middleware(request: NextRequest) {
     const origin = request.headers.get('origin')
     const host = request.headers.get('host')
 
-    // Skip CSRF for widget API (public)
-    if (!pathname.startsWith('/api/widget')) {
+    // Skip CSRF for widget API (public) and consent logging
+    if (!pathname.startsWith('/api/widget') && !pathname.startsWith('/api/consent')) {
       // Verify origin matches host
       if (origin && !origin.includes(host || '')) {
         return new NextResponse('CSRF validation failed', { status: 403 })

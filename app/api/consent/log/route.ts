@@ -1,4 +1,4 @@
-import { hashIP } from '@/lib/security-utils'
+import { extractIP, hashIP } from '@/lib/security-utils'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey)
+
   try {
     const { categories, consentText, consentGiven } = await request.json()
 
@@ -31,9 +32,10 @@ export async function POST(request: NextRequest) {
       userId = data.user?.id ?? null
     }
 
-    // IP best-effort (x-forwarded-for may contain list; take first)
-    const fwd = request.headers.get('x-forwarded-for') || ''
-    const ip = (request.ip || fwd.split(',')[0] || 'unknown').trim()
+    // Extract and hash IP properly (handles proxies and Vercel)
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    const realIP = request.headers.get('x-real-ip') // Vercel uses this
+    const ip = extractIP(request.ip, forwardedFor, realIP)
     const ipHash = await hashIP(ip)
 
     const userAgent = request.headers.get('user-agent') ?? 'unknown'
