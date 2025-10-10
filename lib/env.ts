@@ -1,4 +1,3 @@
-// lib/env.ts
 import { z } from 'zod'
 
 const envSchema = z.object({
@@ -9,13 +8,13 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   APP_BASE_URL: z.string().url().default('http://localhost:3000'),
 
-  // Supabase (will be required in Step 2)
+  // Supabase (required)
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   SUPABASE_DB_URL: z.string().optional(),
 
-  // AWS SES (will be required in Step 2)
+  // AWS SES
   AWS_SES_REGION: z.string().default('eu-central-1'),
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
@@ -27,7 +26,7 @@ const envSchema = z.object({
   IP_HASH_PEPPER: z.string().min(32).optional(),
   JWT_SECRET: z.string().min(32).optional(),
 
-  // Stripe (will be required in Step 4)
+  // Stripe
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
@@ -74,6 +73,24 @@ export function getEnv(): Env {
   return env
 }
 
+// Validate required environment variables (for production)
+export function validateEnv(): void {
+  const requiredVars = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY']
+  const missing: string[] = []
+
+  for (const varName of requiredVars) {
+    if (!process.env[varName]) {
+      missing.push(varName)
+    }
+  }
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables:\n${missing.join('\n')}\n\nPlease check your .env.local file.`,
+    )
+  }
+}
+
 // Helper to check if all required services are configured
 export function checkRequiredEnv(
   services: Array<'supabase' | 'ses' | 'stripe' | 'security'>,
@@ -101,4 +118,46 @@ export const config = {
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV === 'development',
   isTest: process.env.NODE_ENV === 'test',
+}
+
+// ========== НОВЫЕ HELPER FUNCTIONS (добавляем к твоему существующему файлу) ==========
+
+/**
+ * Get widget embed URL for a business
+ */
+export function getWidgetEmbedUrl(businessId: string): string {
+  const env = getEnv()
+  const baseUrl = env.APP_BASE_URL || env.NEXT_PUBLIC_APP_URL
+  return `${baseUrl}/widget/${businessId}`
+}
+
+/**
+ * Get widget script URL
+ */
+export function getWidgetScriptUrl(): string {
+  const env = getEnv()
+  const baseUrl = env.APP_BASE_URL || env.NEXT_PUBLIC_APP_URL
+  return `${baseUrl}/widget.js`
+}
+
+/**
+ * Get QR code API URL for a business
+ */
+export function getQRCodeUrl(businessId: string, params?: Record<string, string>): string {
+  const env = getEnv()
+  const baseUrl = env.APP_BASE_URL || env.NEXT_PUBLIC_APP_URL
+  const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+  return `${baseUrl}/api/qr/${businessId}${queryString}`
+}
+
+/**
+ * Get Supabase client configuration
+ */
+export function getSupabaseConfig() {
+  const env = getEnv()
+  return {
+    url: env.NEXT_PUBLIC_SUPABASE_URL || '',
+    anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY || '',
+  }
 }
