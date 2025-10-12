@@ -16,9 +16,30 @@ export const BRAND = {
     noreply: 'no-reply@kundenmagnet-app.de',
   },
   plans: {
-    starter: { name: 'Starter', price: 9, currency: '€' },
-    pro: { name: 'Pro', price: 19, currency: '€' },
-    business: { name: 'Business', price: 39, currency: '€' },
+    starter: {
+      name: 'Starter',
+      price: 9,
+      currency: '€',
+      limits: {
+        campaigns: 1, // ← 1 campaign
+      },
+    },
+    pro: {
+      name: 'Pro',
+      price: 19,
+      currency: '€',
+      limits: {
+        campaigns: 10, // ← 10 campaigns
+      },
+    },
+    business: {
+      name: 'Business',
+      price: 39,
+      currency: '€',
+      limits: {
+        campaigns: -1, // ← unlimited (-1)
+      },
+    },
   },
 } as const
 
