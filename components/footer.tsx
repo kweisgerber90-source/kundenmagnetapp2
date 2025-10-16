@@ -1,4 +1,7 @@
-// components/footer.tsx
+// Hinweis (DE):
+// - Footer verlinkt alle Rechtstexte + Kontakt; zeigt Basiskontakt und kurze Produkt-/DSGVO-Hinweise.
+// - Der Block "Kontakt" zeigt auf /kontakt und mailto:. Optional kann eine Telefon- oder Adresszeile ergänzt werden.
+
 'use client'
 
 import { BRAND } from '@/lib/constants'
@@ -8,14 +11,13 @@ import { usePathname } from 'next/navigation'
 
 export function Footer() {
   const pathname = usePathname()
-
-  // Show full contact details only on legal pages
   const isLegalPage = pathname?.startsWith('/legal/')
 
   return (
     <footer className="border-t border-gray-100 bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
+          {/* Produkt-/Brand-Beschreibung */}
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md">
@@ -24,8 +26,8 @@ export function Footer() {
               <h3 className="text-lg font-bold">{BRAND.name}</h3>
             </div>
             <p className="mt-3 text-sm text-gray-600">
-              Die einfachste Lösung für authentische Kundenbewertungen in DACH. Sammeln, moderieren
-              und präsentieren Sie Testimonials, die Vertrauen schaffen.
+              Die einfache Lösung für authentische Kundenbewertungen in DACH: sammeln, moderieren
+              und präsentieren – für mehr Vertrauen und Conversion.
             </p>
             <div className="mt-4 flex items-center space-x-4">
               <div className="flex items-center space-x-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
@@ -39,93 +41,75 @@ export function Footer() {
             </div>
           </div>
 
+          {/* Produkt-Links */}
           <div>
             <h4 className="mb-4 text-sm font-semibold text-gray-900">Produkt</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link
-                  href="/features"
-                  className="text-gray-600 transition-colors hover:text-blue-600"
-                >
+                <Link href="/features" className="text-gray-600 hover:text-blue-600">
                   Funktionen
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/pricing"
-                  className="text-gray-600 transition-colors hover:text-blue-600"
-                >
+                <Link href="/pricing" className="text-gray-600 hover:text-blue-600">
                   Preise
                 </Link>
               </li>
               <li>
-                <Link href="/docs" className="text-gray-600 transition-colors hover:text-blue-600">
+                <Link href="/docs" className="text-gray-600 hover:text-blue-600">
                   Dokumentation
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/docs/widget"
-                  className="text-gray-600 transition-colors hover:text-blue-600"
-                >
+                <Link href="/docs/widget" className="text-gray-600 hover:text-blue-600">
                   Widget Integration
                 </Link>
               </li>
               <li>
                 <Link
                   href="/status"
-                  className="flex items-center text-gray-600 transition-colors hover:text-blue-600"
+                  className="flex items-center text-gray-600 hover:text-blue-600"
                 >
-                  System Status
-                  <div className="ml-2 h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                  System Status{' '}
+                  <span className="ml-2 h-2 w-2 animate-pulse rounded-full bg-green-500" />
                 </Link>
               </li>
             </ul>
           </div>
 
+          {/* Rechtliches */}
           <div>
             <h4 className="mb-4 text-sm font-semibold text-gray-900">Rechtliches</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link
-                  href="/legal/impressum"
-                  className="text-gray-600 transition-colors hover:text-blue-600"
-                >
+                <Link href="/legal/impressum" className="text-gray-600 hover:text-blue-600">
                   Impressum
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/legal/datenschutz"
-                  className="text-gray-600 transition-colors hover:text-blue-600"
-                >
+                <Link href="/legal/datenschutz" className="text-gray-600 hover:text-blue-600">
                   Datenschutz
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/legal/agb"
-                  className="text-gray-600 transition-colors hover:text-blue-600"
-                >
+                <Link href="/legal/agb" className="text-gray-600 hover:text-blue-600">
                   AGB
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/legal/dpa"
-                  className="text-gray-600 transition-colors hover:text-blue-600"
-                >
+                <Link href="/legal/dpa" className="text-gray-600 hover:text-blue-600">
                   Auftragsverarbeitung
                 </Link>
               </li>
             </ul>
           </div>
 
+          {/* Kontakt */}
           <div>
             <h4 className="mb-4 text-sm font-semibold text-gray-900">Kontakt</h4>
             <ul className="space-y-3 text-sm">
               {isLegalPage ? (
-                // Full contact details on legal pages only
+                // Auf Rechteseiten zeigen wir die "harten" Kontaktdaten direkt
                 <>
                   <li className="text-gray-600">
                     <div className="font-medium text-gray-900">{BRAND.owner}</div>
@@ -142,7 +126,7 @@ export function Footer() {
                   <li>
                     <a
                       href={`mailto:${BRAND.email.support}`}
-                      className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-blue-600"
+                      className="flex items-center space-x-2 text-gray-600 hover:text-blue-600"
                     >
                       <Mail className="h-4 w-4 text-gray-400" />
                       <span className="text-xs">{BRAND.email.support}</span>
@@ -151,7 +135,7 @@ export function Footer() {
                   <li>
                     <a
                       href={`tel:${BRAND.phone}`}
-                      className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-blue-600"
+                      className="flex items-center space-x-2 text-gray-600 hover:text-blue-600"
                     >
                       <Phone className="h-4 w-4 text-gray-400" />
                       <span className="text-xs">{BRAND.phone}</span>
@@ -159,12 +143,12 @@ export function Footer() {
                   </li>
                 </>
               ) : (
-                // Only email on marketing pages
+                // Auf normalen Seiten verlinken wir primär auf Mail + Kontaktformular
                 <>
                   <li>
                     <a
                       href={`mailto:${BRAND.email.support}`}
-                      className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-blue-600"
+                      className="flex items-center space-x-2 text-gray-600 hover:text-blue-600"
                     >
                       <Mail className="h-4 w-4 text-gray-400" />
                       <span className="text-sm">{BRAND.email.support}</span>
@@ -173,14 +157,14 @@ export function Footer() {
                   <li>
                     <Link
                       href="/kontakt"
-                      className="inline-flex items-center space-x-1 text-sm text-blue-600 transition-colors hover:text-blue-700"
+                      className="inline-flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700"
                     >
                       <span>Kontaktformular</span>
                       <span>→</span>
                     </Link>
                   </li>
                   <li className="text-xs text-gray-500">
-                    Vollständige Kontaktdaten finden Sie im{' '}
+                    Vollständige Kontaktdaten im{' '}
                     <Link href="/legal/impressum" className="underline hover:text-blue-600">
                       Impressum
                     </Link>
@@ -191,6 +175,7 @@ export function Footer() {
           </div>
         </div>
 
+        {/* Fußzeile mit Copyright-Zeile */}
         <div className="mt-8 border-t border-gray-100 pt-8">
           <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
             <p className="text-sm text-gray-500">
