@@ -1,3 +1,21 @@
+// lib/env.ts
+/**
+ * Environment Variables Schema & Validation
+ *
+ * ÄNDERUNGEN (AWS SES → Brevo Migration):
+ * - AWS_SES_REGION entfernt
+ * - AWS_ACCESS_KEY_ID entfernt
+ * - AWS_SECRET_ACCESS_KEY entfernt
+ * - SES_FROM_EMAIL entfernt
+ * - SES_REPLY_TO_EMAIL entfernt
+ * - SES_CONFIGURATION_SET entfernt
+ *
+ * + BREVO_API_KEY hinzugefügt
+ * + BREVO_BASE_URL hinzugefügt
+ * + BREVO_SENDER hinzugefügt
+ * + BREVO_REPLY_TO hinzugefügt
+ */
+
 import { z } from 'zod'
 
 const envSchema = z.object({
@@ -14,13 +32,20 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   SUPABASE_DB_URL: z.string().optional(),
 
-  // AWS SES
-  AWS_SES_REGION: z.string().default('eu-central-1'),
-  AWS_ACCESS_KEY_ID: z.string().optional(),
-  AWS_SECRET_ACCESS_KEY: z.string().optional(),
-  SES_FROM_EMAIL: z.string().email().default('no-reply@kundenmagnet-app.de'),
-  SES_REPLY_TO_EMAIL: z.string().email().default('support@kundenmagnet-app.de'),
-  SES_CONFIGURATION_SET: z.string().optional(),
+  // ============================================================================
+  // Brevo Transactional Email (EU-Server)
+  // Ersetzt AWS SES
+  // ============================================================================
+  BREVO_API_KEY: z.string().min(1).optional(), // In Production: required
+  BREVO_BASE_URL: z.string().url().default('https://api.brevo.com/v3'),
+  BREVO_SENDER: z
+    .string()
+    .regex(
+      /^.+\s*<[^@]+@[^@]+\.[^@]+>$|^[^@]+@[^@]+\.[^@]+$/,
+      'BREVO_SENDER muss Format "Name <email@domain.com>" oder "email@domain.com" haben',
+    )
+    .default('Kundenmagnetapp <no-reply@kundenmagnet-app.de>'),
+  BREVO_REPLY_TO: z.string().email().default('support@kundenmagnet-app.de'),
 
   // Security
   IP_HASH_PEPPER: z.string().min(32).optional(),
@@ -93,7 +118,7 @@ export function validateEnv(): void {
 
 // Helper to check if all required services are configured
 export function checkRequiredEnv(
-  services: Array<'supabase' | 'ses' | 'stripe' | 'security'>,
+  services: Array<'supabase' | 'brevo' | 'stripe' | 'security'>, // ✅ 'ses' → 'brevo'
 ): boolean {
   const env = getEnv()
 
@@ -103,7 +128,7 @@ export function checkRequiredEnv(
         env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
         env.SUPABASE_SERVICE_ROLE_KEY,
     ),
-    ses: Boolean(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.SES_FROM_EMAIL),
+    brevo: Boolean(env.BREVO_API_KEY && env.BREVO_SENDER), // ✅ NEU: Brevo check
     stripe: Boolean(
       env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     ),
@@ -120,7 +145,7 @@ export const config = {
   isTest: process.env.NODE_ENV === 'test',
 }
 
-// ========== НОВЫЕ HELPER FUNCTIONS (добавляем к твоему существующему файлу) ==========
+// ========== HELPER FUNCTIONS ==========
 
 /**
  * Get widget embed URL for a business

@@ -1,7 +1,9 @@
-// Hinweis (DE):
-// - Diese Erklärung nennt Verantwortliche Stelle, Hosting/Infra (Vercel + ALL-INKL), Logfiles, Cookies,
-//   Zahlungsabwicklung (Stripe) und transaktionalen Mailversand (AWS SES eu-central-1).
-// - Formulierungen sind bewusst klar und praxisnah gehalten (ausreichend für Trust & Safety / DSGVO-Transparenz).
+// app/legal/datenschutz/page.tsx
+/**
+ * Datenschutzerklärung
+ *
+ * Änderung: AWS SES durch Brevo ersetzt (Abschnitt 7)
+ */
 
 import { BRAND } from '@/lib/constants'
 
@@ -71,15 +73,25 @@ export default function DatenschutzPage() {
           <h2 className="mt-6 text-xl font-semibold">7. E-Mail-Versand (transaktional)</h2>
           <p>
             Für transaktionale E-Mails (z. B. Bestätigungen, Benachrichtigungen, Passwort-Reset)
-            nutzen wir <strong>Amazon Web Services – Simple Email Service (AWS SES)</strong> in der
-            Region <strong>eu-central-1 (Frankfurt)</strong>. AWS ist u. a. nach ISO
-            27001/27017/27018 zertifiziert. Für unsere Domain sind SPF, DKIM und DMARC konfiguriert.
+            nutzen wir <strong>Brevo (ehemals Sendinblue)</strong>. Brevo betreibt seine Server in
+            der Europäischen Union und ist nach ISO 27001 zertifiziert. Alle E-Mails werden
+            ausschließlich über EU-Rechenzentren versendet.
           </p>
           <p>
             Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem technisch
             einwandfreien und sicheren E-Mail-Versand). Nutzer können der weiteren Zusendung
             transaktionaler E-Mails jederzeit widersprechen oder ihr Nutzerkonto löschen; in diesem
             Fall werden personenbezogene Daten gemäß den gesetzlichen Vorgaben gelöscht.
+          </p>
+          <p>
+            Weitere Informationen zum Datenschutz bei Brevo:{' '}
+            <a
+              href="https://www.brevo.com/de/legal/privacypolicy/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              https://www.brevo.com/de/legal/privacypolicy/
+            </a>
           </p>
 
           <h2 className="mt-6 text-xl font-semibold">8. Speicherdauer</h2>

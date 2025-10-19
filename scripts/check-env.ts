@@ -37,9 +37,9 @@ try {
       ],
     },
     {
-      name: 'AWS SES',
-      key: 'ses' as const,
-      required: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
+      name: 'Brevo Email',
+      key: 'brevo' as const,
+      required: ['BREVO_API_KEY', 'BREVO_SENDER'],
     },
     {
       name: 'Stripe',
@@ -77,7 +77,7 @@ try {
     if (!env.NEXT_PUBLIC_APP_URL.includes('kundenmagnet-app.de')) {
       warnings.push('APP_URL should be set to production domain')
     }
-    if (!checkRequiredEnv(['supabase', 'ses', 'stripe', 'security'])) {
+    if (!checkRequiredEnv(['supabase', 'brevo', 'stripe', 'security'])) {
       warnings.push('Not all services are configured')
     }
 
