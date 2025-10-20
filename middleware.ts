@@ -1,7 +1,10 @@
+import { updateSession } from '@/lib/supabase/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next()
+export async function middleware(request: NextRequest) {
+  // Auth-Session aktualisieren (Supabase)
+  const response = await updateSession(request)
+
   const pathname = request.nextUrl.pathname
 
   // Rate limiting headers (basic implementation)
