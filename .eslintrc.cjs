@@ -34,6 +34,17 @@ module.exports = {
     'no-console': ['warn', { allow: ['warn', 'error'] }],
     '@typescript-eslint/no-explicit-any': 'error',
   },
+  overrides: [
+    {
+      files: ['scripts/**/*.{js,ts,tsx}'],
+      rules: {
+        // Allow CommonJS require in Node scripts
+        '@typescript-eslint/no-var-requires': 'off',
+        // Allow console usage in local scripts
+        'no-console': 'off',
+      },
+    },
+  ],
   settings: {
     react: {
       version: 'detect',

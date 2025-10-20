@@ -62,11 +62,10 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY=placeholder-service-role-key
           SUPABASE_DB_URL=postgresql://placeholder
 
-          AWS_SES_REGION=eu-central-1
-          AWS_ACCESS_KEY_ID=placeholder-key-id
-          AWS_SECRET_ACCESS_KEY=placeholder-secret
-          SES_FROM="Kundenmagnetapp <no-reply@kundenmagnet-app.de>"
-          SES_REPLY_TO=support@kundenmagnet-app.de
+          BREVO_API_KEY=ci-placeholder-brevo-key
+          BREVO_SENDER="Kundenmagnetapp <no-reply@kundenmagnet-app.de>"
+          BREVO_REPLY_TO=support@kundenmagnet-app.de
+          BREVO_WEBHOOK_TOKEN=ci-webhook-token
 
           IP_HASH_PEPPER=ci-placeholder-pepper-change-in-production
 

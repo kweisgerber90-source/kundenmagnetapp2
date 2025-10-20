@@ -2,6 +2,9 @@
 import { getSystemHealth } from '@/lib/health'
 import { NextResponse } from 'next/server'
 
+export const runtime = 'nodejs'
+export const preferredRegion = ['fra1']
+
 export async function GET() {
   try {
     const health = await getSystemHealth()

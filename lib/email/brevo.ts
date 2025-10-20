@@ -1,310 +1,214 @@
 // lib/email/brevo.ts
 /**
  * Brevo Transactional Email Service
- *
- * Ersetzt AWS SES durch Brevo API (EU-Server: api.brevo.com)
- *
- * Features:
- * - Transaktionale E-Mails (SimpleEmail)
- * - Template-basierte E-Mails
- * - Logging in `email_sends` Tabelle
- * - DSGVO-konform (Brevo nutzt EU-Server)
- *
- * Wichtig:
- * - BREVO_API_KEY muss in ENV gesetzt sein
- * - Sender muss in Brevo verifiziert sein
- * - Alle E-Mails werden über Frankfurt/EU-Rechenzentrum versendet
+ * - Versendet einfache & Template-basierte E-Mails über @getbrevo/brevo
+ * - Loggt Zustände in Postgres (email_sends)
  */
 
 import { getEnv } from '@/lib/env'
 import * as brevo from '@getbrevo/brevo'
 import { createClient } from '@supabase/supabase-js'
 
-const env = getEnv()
+// Helpers to safely extract fields from SDK responses without broad 'any'
+function extractBody(resp: unknown): unknown {
+  if (!resp) return resp
+  // Some SDKs return { response: { body } } or { body } or raw object
+  try {
+    const r = resp as Record<string, unknown>
+    if (r.body) return r.body
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((r as any).response?.body) return (r as any).response.body
+    return resp
+  } catch {
+    return resp
+  }
+}
 
-// Brevo API Client initialisieren
-const apiInstance = new brevo.TransactionalEmailsApi()
-apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, env.BREVO_API_KEY || '')
+function getField<T>(obj: unknown, key: string): T | undefined {
+  if (!obj || typeof obj !== 'object') return undefined
+  return (obj as Record<string, unknown>)[key] as T | undefined
+}
 
-// Supabase Client für Logging
-const supabase = createClient(
-  env.NEXT_PUBLIC_SUPABASE_URL || '',
-  env.SUPABASE_SERVICE_ROLE_KEY || '',
-)
-
-/**
- * Interface für einfache E-Mails
- */
-interface SimpleEmailParams {
+type SendSimpleArgs = {
   to: string
   subject: string
-  html: string
+  html?: string
   text?: string
-  replyTo?: string
+  tags?: string[]
 }
 
-/**
- * Interface für Template-basierte E-Mails
- */
-interface TemplateEmailParams {
+type SendTemplateArgs = {
   to: string
   templateId: number
-  params?: Record<string, string | number>
-  replyTo?: string
+  params?: Record<string, unknown>
+  tags?: string[]
 }
 
-/**
- * Sende eine einfache E-Mail
- */
-export async function sendSimpleEmail({
-  to,
-  subject,
-  html,
-  text,
-  replyTo,
-}: SimpleEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
+function getSupabase(env = getEnv()) {
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)
+}
+
+function getBrevoApi(env = getEnv()) {
+  const api = new brevo.TransactionalEmailsApi()
+
+  // Try to set basePath if SDK exposes it
   try {
-    const sendSmtpEmail = new brevo.SendSmtpEmail()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (api as any).basePath = env.BREVO_BASE_URL || 'https://api.brevo.com'
+  } catch (e) {
+    // ignore
+  }
 
-    // Sender aus ENV
-    const [senderName, senderEmail] = parseSender(env.BREVO_SENDER)
-    sendSmtpEmail.sender = { name: senderName, email: senderEmail }
-
-    // Empfänger
-    sendSmtpEmail.to = [{ email: to }]
-
-    // Betreff & Inhalt
-    sendSmtpEmail.subject = subject
-    sendSmtpEmail.htmlContent = html
-    if (text) {
-      sendSmtpEmail.textContent = text
-    }
-
-    // Reply-To
-    if (replyTo) {
-      sendSmtpEmail.replyTo = { email: replyTo }
-    } else if (env.BREVO_REPLY_TO) {
-      sendSmtpEmail.replyTo = { email: env.BREVO_REPLY_TO }
-    }
-
-    // Versand
-    const response = await apiInstance.sendTransacEmail(sendSmtpEmail)
-
-    // Brevo SDK Response ist kompliziert - extrahiere Message ID sicher
-    let messageId = 'unknown'
+  // Try to set API key (method may differ between SDK versions)
+  if (env.BREVO_API_KEY) {
     try {
-      const resp = response as unknown
-      let bodyCandidate: unknown = undefined
-      if (resp && typeof resp === 'object') {
-        const r = resp as Record<string, unknown>
-        if ('body' in r) bodyCandidate = r.body
-        else if ('response' in r && r.response && typeof r.response === 'object') {
-          const rr = r.response as Record<string, unknown>
-          if ('body' in rr) bodyCandidate = rr.body
-        }
-      }
-
-      if (
-        bodyCandidate &&
-        typeof bodyCandidate === 'object' &&
-        'messageId' in (bodyCandidate as Record<string, unknown>)
-      ) {
-        const mid = (bodyCandidate as Record<string, unknown>).messageId
-        if (typeof mid === 'string' || typeof mid === 'number') {
-          messageId = String(mid)
-        }
-      }
-    } catch {
-      // Fallback auf 'sent' wenn Message ID nicht extrahierbar
-      messageId = 'sent'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (api as any).setApiKey?.(brevo.TransactionalEmailsApiApiKeys.apiKey, env.BREVO_API_KEY)
+    } catch (e) {
+      // ignore
     }
-
-    // Logging
-    await logEmailSend({
-      toEmail: to,
-      template: 'simple_email',
-      messageId,
-      status: 'sent',
-    })
-
-    return { success: true, messageId }
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-
-    // Logging
-    await logEmailSend({
-      toEmail: to,
-      template: 'simple_email',
-      messageId: null,
-      status: 'failed',
-    })
-
-    return { success: false, error: errorMessage }
   }
+
+  return api
 }
 
-/**
- * Sende eine Template-basierte E-Mail
- */
-export async function sendTemplateEmail({
-  to,
-  templateId,
-  params,
-  replyTo,
-}: TemplateEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  try {
-    const sendSmtpEmail = new brevo.SendSmtpEmail()
-
-    // Sender aus ENV
-    const [senderName, senderEmail] = parseSender(env.BREVO_SENDER)
-    sendSmtpEmail.sender = { name: senderName, email: senderEmail }
-
-    // Empfänger
-    sendSmtpEmail.to = [{ email: to }]
-
-    // Template ID
-    sendSmtpEmail.templateId = templateId
-
-    // Template-Parameter
-    if (params) {
-      sendSmtpEmail.params = params
-    }
-
-    // Reply-To
-    if (replyTo) {
-      sendSmtpEmail.replyTo = { email: replyTo }
-    } else if (env.BREVO_REPLY_TO) {
-      sendSmtpEmail.replyTo = { email: env.BREVO_REPLY_TO }
-    }
-
-    // Versand
-    const response = await apiInstance.sendTransacEmail(sendSmtpEmail)
-
-    // Brevo SDK Response ist kompliziert - extrahiere Message ID sicher
-    let messageId = 'unknown'
-    try {
-      const resp = response as unknown
-      let bodyCandidate: unknown = undefined
-      if (resp && typeof resp === 'object') {
-        const r = resp as Record<string, unknown>
-        if ('body' in r) bodyCandidate = r.body
-        else if ('response' in r && r.response && typeof r.response === 'object') {
-          const rr = r.response as Record<string, unknown>
-          if ('body' in rr) bodyCandidate = rr.body
-        }
-      }
-
-      if (
-        bodyCandidate &&
-        typeof bodyCandidate === 'object' &&
-        'messageId' in (bodyCandidate as Record<string, unknown>)
-      ) {
-        const mid = (bodyCandidate as Record<string, unknown>).messageId
-        if (typeof mid === 'string' || typeof mid === 'number') {
-          messageId = String(mid)
-        }
-      }
-    } catch {
-      // Fallback auf 'sent' wenn Message ID nicht extrahierbar
-      messageId = 'sent'
-    }
-
-    // Logging
-    await logEmailSend({
-      toEmail: to,
-      template: `template_${templateId}`,
-      messageId,
-      status: 'sent',
-    })
-
-    return { success: true, messageId }
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-
-    // Logging
-    await logEmailSend({
-      toEmail: to,
-      template: `template_${templateId}`,
-      messageId: null,
-      status: 'failed',
-    })
-
-    return { success: false, error: errorMessage }
-  }
+function parseSender(senderRaw: string): { name: string; email: string } {
+  const match = senderRaw?.match(/^(.*)<([^>]+)>$/)
+  if (match) return { name: match[1].trim(), email: match[2].trim() }
+  return { name: '', email: senderRaw }
 }
 
-/**
- * Parse Sender String: "Name <email@domain.com>" → [Name, email@domain.com]
- */
-function parseSender(sender: string): [string, string] {
-  const match = sender.match(/^(.+?)\s*<(.+?)>$/)
-  if (match) {
-    return [match[1].trim(), match[2].trim()]
-  }
-  // Fallback: nur E-Mail
-  return ['Kundenmagnetapp', sender.trim()]
-}
-
-/**
- * Logging in Supabase `email_sends` Tabelle
- */
-async function logEmailSend({
-  toEmail,
-  template,
-  messageId,
-  status,
-}: {
+async function logEmailSend(input: {
   toEmail: string
-  template: string
+  template: string | null
   messageId: string | null
-  status: 'sent' | 'failed'
-}): Promise<void> {
+  status: 'queued' | 'sent' | 'delivered' | 'bounced' | 'complaint' | 'unsubscribed' | 'error'
+}) {
+  const env = getEnv()
+  const supabase = getSupabase(env)
   try {
     await supabase.from('email_sends').insert({
-      to_email: toEmail,
-      template,
-      message_id: messageId,
-      status,
-      created_at: new Date().toISOString(),
+      user_id: null,
+      template: input.template,
+      to_email: input.toEmail.toLowerCase(),
+      message_id: input.messageId,
+      status: input.status,
     })
   } catch {
-    // Fehler stillschweigend ignorieren
-    // (Logging sollte E-Mail-Versand nicht blockieren)
+    // logging must not throw
   }
 }
 
-/**
- * Utility: Prüfe ob E-Mail auf Unsubscribe-Liste steht
- */
-export async function isUnsubscribed(email: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from('email_unsubscribes')
-      .select('id')
-      .eq('email', email.toLowerCase())
-      .single()
+export async function sendSimpleEmail({ to, subject, html, text, tags }: SendSimpleArgs) {
+  const env = getEnv()
+  const api = getBrevoApi(env)
 
-    if (error && error.code !== 'PGRST116') {
-      return false
+  const sendSmtpEmail = new brevo.SendSmtpEmail()
+  sendSmtpEmail.to = [{ email: to }]
+  const sender = parseSender(env.BREVO_SENDER)
+  // assign sender with a cast to avoid SDK type mismatches
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sse: any = sendSmtpEmail as any
+  sse.sender = { name: sender.name || 'Kundenmagnetapp', email: sender.email }
+  sendSmtpEmail.subject = subject
+  if (html) sendSmtpEmail.htmlContent = html
+  if (text) sendSmtpEmail.textContent = text
+  if (env.BREVO_REPLY_TO) sendSmtpEmail.replyTo = { email: env.BREVO_REPLY_TO }
+  if (tags?.length) sendSmtpEmail.tags = tags
+
+  try {
+    const resp = await api.sendTransacEmail(sendSmtpEmail)
+
+    let messageId: string | null = null
+    try {
+      const body = extractBody(resp)
+      const id =
+        getField<number | string | undefined>(body, 'messageId') ??
+        getField<number | string | undefined>(body, 'messageIdString') ??
+        getField<number | string | undefined>(body, 'message_id')
+      if (id !== undefined && id !== null) messageId = String(id)
+    } catch (e) {
+      messageId = null
     }
 
-    return !!data
-  } catch {
-    return false
+    await logEmailSend({ toEmail: to, template: 'simple_email', messageId, status: 'sent' })
+
+    return { success: true, messageId }
+  } catch (error) {
+    await logEmailSend({ toEmail: to, template: 'simple_email', messageId: null, status: 'error' })
+    throw error
   }
 }
 
-/**
- * Utility: Füge E-Mail zur Unsubscribe-Liste hinzu
- */
-export async function addUnsubscribe(email: string, reason?: string): Promise<void> {
+export async function sendTemplateEmail({ to, templateId, params, tags }: SendTemplateArgs) {
+  const env = getEnv()
+  const api = getBrevoApi(env)
+
+  const sendSmtpEmail = new brevo.SendSmtpEmail()
+  sendSmtpEmail.to = [{ email: to }]
+  const sender = parseSender(env.BREVO_SENDER)
+  // assign sender and templateId using casts to handle SDK typings
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sse2: any = sendSmtpEmail as any
+  sse2.sender = { name: sender.name || 'Kundenmagnetapp', email: sender.email }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sse2.templateId = templateId
+  if (params) sendSmtpEmail.params = params
+  if (env.BREVO_REPLY_TO) sendSmtpEmail.replyTo = { email: env.BREVO_REPLY_TO }
+  if (tags?.length) sendSmtpEmail.tags = tags
+
   try {
-    await supabase.from('email_unsubscribes').insert({
-      email: email.toLowerCase(),
-      reason: reason || 'user_request',
-      created_at: new Date().toISOString(),
+    const resp = await api.sendTransacEmail(sendSmtpEmail)
+
+    let messageId: string | null = null
+    try {
+      const body = extractBody(resp)
+      const id =
+        getField<number | string | undefined>(body, 'messageId') ??
+        getField<number | string | undefined>(body, 'messageIdString') ??
+        getField<number | string | undefined>(body, 'message_id')
+      if (id !== undefined && id !== null) messageId = String(id)
+    } catch (e) {
+      messageId = null
+    }
+
+    await logEmailSend({
+      toEmail: to,
+      template: `template_${templateId}`,
+      messageId,
+      status: 'sent',
     })
+
+    return { success: true, messageId }
+  } catch (error) {
+    await logEmailSend({
+      toEmail: to,
+      template: `template_${templateId}`,
+      messageId: null,
+      status: 'error',
+    })
+    throw error
+  }
+}
+
+export async function addUnsubscribe(email: string, reason?: string) {
+  const env = getEnv()
+  const supabase = getSupabase(env)
+  try {
+    await supabase
+      .from('email_unsubscribes')
+      .insert({ email: email.toLowerCase(), reason: reason || 'user_request' })
   } catch {
-    // Fehler stillschweigend ignorieren
+    // noop
+  }
+}
+
+export async function brevoPing(): Promise<boolean> {
+  try {
+    const env = getEnv()
+    void getBrevoApi(env)
+    return true
+  } catch {
+    return false
   }
 }

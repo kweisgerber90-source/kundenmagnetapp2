@@ -1,188 +1,101 @@
 // app/api/brevo/notifications/route.ts
 /**
- * Brevo Webhook Handler
- *
- * Empfängt Webhooks von Brevo für:
- * - Bounces (hard/soft)
- * - Spam-Complaints
- * - Unsubscribes
- *
- * Webhook URL: https://kundenmagnet-app.de/api/brevo/notifications
- *
- * Brevo Webhook Setup:
- * 1. Gehe zu https://app.brevo.com/settings/webhooks
- * 2. Erstelle neuen Webhook
- * 3. URL: https://kundenmagnet-app.de/api/brevo/notifications
- * 4. Events auswählen: hard_bounce, soft_bounce, spam, unsubscribe
- * 5. Optional: Webhook Secret für zusätzliche Sicherheit
- *
- * WICHTIG: Brevo sendet JSON im Body, kein SNS-Format wie AWS
+ * Brevo Webhook Handler (EU)
+ * Verarbeitet Events: delivered, bounce, complaint, unsubscribed, opened, clicked, blocked, invalid, deferred, error.
+ * Absichert über BREVO_WEBHOOK_TOKEN (Bearer oder ?token=)
  */
 
 import { getEnv } from '@/lib/env'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-const env = getEnv()
-const supabase = createClient(
-  env.NEXT_PUBLIC_SUPABASE_URL || '',
-  env.SUPABASE_SERVICE_ROLE_KEY || '',
-)
-
 export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-export const preferredRegion = 'fra1'
+export const preferredRegion = ['fra1']
 
-/**
- * POST Handler für Brevo Webhooks
- */
-export async function POST(request: NextRequest) {
+function supa() {
+  const env = getEnv()
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)
+}
+
+function authOk(req: NextRequest, envToken?: string) {
+  if (!envToken) return true // Falls kein Token gesetzt — kein Zwang
+  const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+  const qp = new URL(req.url).searchParams.get('token')
+  return bearer === envToken || qp === envToken
+}
+
+async function updateStatusByMessageId(messageId: string, status: string) {
+  if (!messageId) return
+  await supa().from('email_sends').update({ status }).eq('message_id', messageId)
+}
+
+async function addUnsub(email: string, reason: string) {
   try {
-    const body = await request.json()
+    await supa().from('email_unsubscribes').insert({
+      email: email.toLowerCase(),
+      reason,
+    })
+  } catch {
+    // still
+  }
+}
 
-    // Brevo Webhook Events haben folgende Struktur:
-    // {
-    //   "event": "hard_bounce" | "soft_bounce" | "spam" | "unsubscribe",
-    //   "email": "user@example.com",
-    //   "id": 123,
-    //   "date": "2025-10-19 12:00:00",
-    //   "message-id": "<...@smtp-relay.brevo.com>",
-    //   "reason": "...",
-    //   ...
-    // }
-
-    const { event, email, reason } = body
-
-    if (!email) {
-      return NextResponse.json({ error: 'No email provided' }, { status: 400 })
+export async function POST(req: NextRequest) {
+  try {
+    const env = getEnv()
+    if (!authOk(req, env.BREVO_WEBHOOK_TOKEN)) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
-    // Event-Typ verarbeiten
-    switch (event) {
-      case 'hard_bounce':
-      case 'soft_bounce':
-        await handleBounce(email, event, reason)
-        break
+    const body = await req.json().catch(() => ({}))
+    // Brevo kann einzelne Events oder Arrays liefern
+    const events = Array.isArray(body) ? body : [body]
 
-      case 'spam':
-        await handleComplaint(email, reason)
-        break
+    for (const ev of events) {
+      const event = String(ev.event || ev.type || '').toLowerCase()
+      const email = String(ev.email || ev.recipient || ev.to || '').toLowerCase()
+      const msgId = String(ev['message-id'] || ev.messageId || ev.message_id || '') || null
+      const reason = String(ev.reason || ev.reasonMessage || ev.tag || '') || undefined
 
-      case 'unsubscribe':
-      case 'list_addition':
-        await handleUnsubscribe(email, reason)
-        break
-
-      case 'request':
-      case 'delivered':
-      case 'unique_opened':
-      case 'opened':
-      case 'click':
-        // Diese Events können ignoriert werden (optional: Analytics)
-        break
-
-      default:
-        // Unbekannter Event-Typ - trotzdem 200 zurückgeben
-        break
+      switch (event) {
+        case 'delivered':
+          await updateStatusByMessageId(msgId!, 'delivered')
+          break
+        case 'bounce':
+        case 'hard_bounce':
+        case 'soft_bounce':
+          await updateStatusByMessageId(msgId!, 'bounced')
+          break
+        case 'complaint':
+        case 'spam':
+          await updateStatusByMessageId(msgId!, 'complaint')
+          await addUnsub(email, reason || 'complaint')
+          break
+        case 'unsubscribed':
+        case 'unsubscribe':
+          await updateStatusByMessageId(msgId!, 'unsubscribed')
+          await addUnsub(email, reason || 'unsubscribed')
+          break
+        case 'blocked':
+          await updateStatusByMessageId(msgId!, 'bounced')
+          break
+        case 'invalid':
+        case 'error':
+          await updateStatusByMessageId(msgId!, 'error')
+          break
+        case 'opened':
+        case 'click':
+        case 'clicked':
+        case 'deferred':
+        default:
+          // Für diese Events aktuell kein Statuswechsel
+          break
+      }
     }
 
-    return NextResponse.json({ success: true, event })
-  } catch (error) {
-    // Fehler loggen aber trotzdem 200 zurückgeben
-    // (sonst versucht Brevo immer wieder zu senden)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    console.error('[Brevo Webhook] error', e)
+    return NextResponse.json({ error: 'server_error' }, { status: 500 })
   }
-}
-
-/**
- * Handle Bounce (hard oder soft)
- */
-async function handleBounce(email: string, type: string, reason?: string) {
-  try {
-    // Update email_sends status
-    await supabase
-      .from('email_sends')
-      .update({ status: 'bounced' })
-      .eq('to_email', email)
-      .order('created_at', { ascending: false })
-      .limit(1)
-
-    // Bei Hard Bounce: auf Unsubscribe-Liste setzen
-    if (type === 'hard_bounce') {
-      await supabase.from('email_unsubscribes').upsert(
-        {
-          email: email.toLowerCase(),
-          reason: `hard_bounce: ${reason || 'unknown'}`,
-          created_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'email',
-        },
-      )
-    }
-  } catch (error) {
-    // Fehler stillschweigend ignorieren
-    // (Webhook sollte immer 200 zurückgeben)
-  }
-}
-
-/**
- * Handle Spam Complaint
- */
-async function handleComplaint(email: string, reason?: string) {
-  try {
-    // Update email_sends status
-    await supabase
-      .from('email_sends')
-      .update({ status: 'complaint' })
-      .eq('to_email', email)
-      .order('created_at', { ascending: false })
-      .limit(1)
-
-    // Auf Unsubscribe-Liste setzen
-    await supabase.from('email_unsubscribes').upsert(
-      {
-        email: email.toLowerCase(),
-        reason: `spam_complaint: ${reason || 'unknown'}`,
-        created_at: new Date().toISOString(),
-      },
-      {
-        onConflict: 'email',
-      },
-    )
-  } catch (error) {
-    // Fehler stillschweigend ignorieren
-  }
-}
-
-/**
- * Handle Unsubscribe
- */
-async function handleUnsubscribe(email: string, reason?: string) {
-  try {
-    await supabase.from('email_unsubscribes').upsert(
-      {
-        email: email.toLowerCase(),
-        reason: reason || 'user_unsubscribe',
-        created_at: new Date().toISOString(),
-      },
-      {
-        onConflict: 'email',
-      },
-    )
-  } catch (error) {
-    // Fehler stillschweigend ignorieren
-  }
-}
-
-/**
- * GET Handler (optional - zum Testen ob Route erreichbar ist)
- */
-export async function GET() {
-  return NextResponse.json({
-    service: 'Brevo Webhook Handler',
-    status: 'active',
-    endpoint: '/api/brevo/notifications',
-    supported_events: ['hard_bounce', 'soft_bounce', 'spam', 'unsubscribe'],
-  })
 }

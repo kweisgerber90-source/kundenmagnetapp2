@@ -41,5 +41,8 @@
   },
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "problems.exclude": {
+    "**/node_modules/**": true
   }
 }

@@ -1,21 +1,4 @@
 // lib/env.ts
-/**
- * Environment Variables Schema & Validation
- *
- * ÄNDERUNGEN (AWS SES → Brevo Migration):
- * - AWS_SES_REGION entfernt
- * - AWS_ACCESS_KEY_ID entfernt
- * - AWS_SECRET_ACCESS_KEY entfernt
- * - SES_FROM_EMAIL entfernt
- * - SES_REPLY_TO_EMAIL entfernt
- * - SES_CONFIGURATION_SET entfernt
- *
- * + BREVO_API_KEY hinzugefügt
- * + BREVO_BASE_URL hinzugefügt
- * + BREVO_SENDER hinzugefügt
- * + BREVO_REPLY_TO hinzugefügt
- */
-
 import { z } from 'zod'
 
 const envSchema = z.object({
@@ -33,10 +16,10 @@ const envSchema = z.object({
   SUPABASE_DB_URL: z.string().optional(),
 
   // ============================================================================
-  // Brevo Transactional Email (EU-Server)
+  // Brevo Transactional Email (EU-Server: Deutschland/Frankreich)
   // Ersetzt AWS SES
   // ============================================================================
-  BREVO_API_KEY: z.string().min(1).optional(), // In Production: required
+  BREVO_API_KEY: z.string().default(''), // Optional für Development Builds
   BREVO_BASE_URL: z.string().url().default('https://api.brevo.com/v3'),
   BREVO_SENDER: z
     .string()
@@ -46,6 +29,8 @@ const envSchema = z.object({
     )
     .default('Kundenmagnetapp <no-reply@kundenmagnet-app.de>'),
   BREVO_REPLY_TO: z.string().email().default('support@kundenmagnet-app.de'),
+  // Optional shared secret/token used to secure incoming Brevo webhook requests
+  BREVO_WEBHOOK_TOKEN: z.string().min(8).optional(),
 
   // Security
   IP_HASH_PEPPER: z.string().min(32).optional(),
@@ -81,14 +66,13 @@ export function getEnv(): Env {
     // eslint-disable-next-line no-console
     console.error(JSON.stringify(parsed.error.flatten().fieldErrors, null, 2))
 
-    // In development, provide helpful error messages
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
-      console.log('\n📝 Copy .env.example to .env.local and fill in the required values:')
+      console.error('\n📝 Copy .env.example to .env.local and fill in the required values:')
       // eslint-disable-next-line no-console
-      console.log('cp .env.example .env.local')
+      console.error('cp .env.example .env.local')
       // eslint-disable-next-line no-console
-      console.log('\nThen edit .env.local with your configuration.')
+      console.error('\nThen edit .env.local with your configuration.')
     }
 
     throw new Error('Invalid environment variables')
@@ -118,7 +102,7 @@ export function validateEnv(): void {
 
 // Helper to check if all required services are configured
 export function checkRequiredEnv(
-  services: Array<'supabase' | 'brevo' | 'stripe' | 'security'>, // ✅ 'ses' → 'brevo'
+  services: Array<'supabase' | 'brevo' | 'stripe' | 'security'>,
 ): boolean {
   const env = getEnv()
 
@@ -128,7 +112,7 @@ export function checkRequiredEnv(
         env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
         env.SUPABASE_SERVICE_ROLE_KEY,
     ),
-    brevo: Boolean(env.BREVO_API_KEY && env.BREVO_SENDER), // ✅ NEU: Brevo check
+    brevo: Boolean(env.BREVO_API_KEY && env.BREVO_SENDER),
     stripe: Boolean(
       env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     ),
@@ -143,46 +127,4 @@ export const config = {
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV === 'development',
   isTest: process.env.NODE_ENV === 'test',
-}
-
-// ========== HELPER FUNCTIONS ==========
-
-/**
- * Get widget embed URL for a business
- */
-export function getWidgetEmbedUrl(businessId: string): string {
-  const env = getEnv()
-  const baseUrl = env.APP_BASE_URL || env.NEXT_PUBLIC_APP_URL
-  return `${baseUrl}/widget/${businessId}`
-}
-
-/**
- * Get widget script URL
- */
-export function getWidgetScriptUrl(): string {
-  const env = getEnv()
-  const baseUrl = env.APP_BASE_URL || env.NEXT_PUBLIC_APP_URL
-  return `${baseUrl}/widget.js`
-}
-
-/**
- * Get QR code API URL for a business
- */
-export function getQRCodeUrl(businessId: string, params?: Record<string, string>): string {
-  const env = getEnv()
-  const baseUrl = env.APP_BASE_URL || env.NEXT_PUBLIC_APP_URL
-  const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
-  return `${baseUrl}/api/qr/${businessId}${queryString}`
-}
-
-/**
- * Get Supabase client configuration
- */
-export function getSupabaseConfig() {
-  const env = getEnv()
-  return {
-    url: env.NEXT_PUBLIC_SUPABASE_URL || '',
-    anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY || '',
-  }
 }
