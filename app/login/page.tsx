@@ -1,8 +1,12 @@
-// app/login/page.tsx
-// Login-Seite (E-Mail/Passwort + Magic Link), DE-Texte, keine UI-Abhängigkeiten.
-
 'use client'
 
+// Anmeldeseite (E-Mail/Passwort + Magic Link) im einheitlichen UI-Stil.
+
+import { AlertError, AlertSuccess } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -48,103 +52,94 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[80vh] bg-white">
-      <div className="mx-auto max-w-md px-6 py-16">
-        <h1 className="mb-2 text-2xl font-semibold text-slate-900">Anmelden</h1>
-        <p className="mb-6 text-slate-600">
-          Melde dich mit E-Mail & Passwort an oder fordere einen Magic Link an.
-        </p>
+    <div className="min-h-[80vh] bg-gradient-to-b from-slate-50 to-white">
+      <div className="mx-auto max-w-md px-4 py-12">
+        <Card>
+          <CardHeader>
+            <CardTitle>Anmelden</CardTitle>
+            <CardDescription>
+              Melde dich mit E-Mail & Passwort an oder fordere einen Magic Link an.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 flex gap-2">
+              <Button
+                variant={mode === 'password' ? 'default' : 'secondary'}
+                size="sm"
+                onClick={() => setMode('password')}
+              >
+                Passwort
+              </Button>
+              <Button
+                variant={mode === 'magic' ? 'default' : 'secondary'}
+                size="sm"
+                onClick={() => setMode('magic')}
+              >
+                Magic Link
+              </Button>
+            </div>
 
-        <div className="mb-4 flex gap-2">
-          <button
-            onClick={() => setMode('password')}
-            className={`rounded-md px-3 py-1 text-sm ${mode === 'password' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'}`}
-          >
-            Passwort
-          </button>
-          <button
-            onClick={() => setMode('magic')}
-            className={`rounded-md px-3 py-1 text-sm ${mode === 'magic' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'}`}
-          >
-            Magic Link
-          </button>
-        </div>
+            {error && <AlertError>{error}</AlertError>}
+            {message && <AlertSuccess>{message}</AlertSuccess>}
 
-        {error && (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-        {message && (
-          <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            {message}
-          </div>
-        )}
+            {mode === 'password' ? (
+              <form onSubmit={handlePasswordLogin} className="space-y-4">
+                <div>
+                  <Label htmlFor="email">E-Mail</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@firma.de"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="password">Passwort</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                </div>
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? 'Anmelden…' : 'Anmelden'}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleMagicLink} className="space-y-4">
+                <div>
+                  <Label htmlFor="email2">E-Mail</Label>
+                  <Input
+                    id="email2"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@firma.de"
+                  />
+                </div>
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? 'Senden…' : 'Magic Link senden'}
+                </Button>
+              </form>
+            )}
 
-        {mode === 'password' ? (
-          <form onSubmit={handlePasswordLogin} className="space-y-4">
-            <label className="block">
-              <span className="mb-1 block text-sm text-slate-700">E-Mail</span>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                placeholder="name@firma.de"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm text-slate-700">Passwort</span>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                placeholder="••••••••"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-            >
-              {loading ? 'Anmelden…' : 'Anmelden'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleMagicLink} className="space-y-4">
-            <label className="block">
-              <span className="mb-1 block text-sm text-slate-700">E-Mail</span>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                placeholder="name@firma.de"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-            >
-              {loading ? 'Senden…' : 'Magic Link senden'}
-            </button>
-          </form>
-        )}
-
-        <p className="mt-6 text-center text-sm text-slate-600">
-          Noch kein Konto?{' '}
-          <Link
-            href="/register"
-            className="font-medium text-slate-900 underline-offset-2 hover:underline"
-          >
-            Jetzt registrieren
-          </Link>
-        </p>
+            <p className="mt-6 text-center text-sm text-slate-600">
+              Noch kein Konto?{' '}
+              <Link
+                href="/register"
+                className="font-medium text-slate-900 underline-offset-2 hover:underline"
+              >
+                Jetzt registrieren
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
