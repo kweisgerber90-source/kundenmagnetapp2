@@ -18,7 +18,7 @@ export default function Home() {
       <SEOJsonLD type="FAQPage" />
 
       {/* Hero Section with gradient background */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <section className="section-clip relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         {/* Decorative elements */}
         <div className="bg-pattern absolute inset-0 opacity-50" />
         <div className="absolute -right-40 -top-40 h-80 w-80 rounded-full bg-blue-400/10 blur-3xl" />

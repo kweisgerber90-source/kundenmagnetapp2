@@ -185,3 +185,26 @@
     }
   }
 }
+
+/* --- Anti-horizontal scroll (mobile safe) --- */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip; /* лучше, чем hidden, т.к. не ломает sticky в iOS */
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+  display: block; /* убирает inline-gap и случайные «вспухания» */
+}
+
+/* Иногда тени/blur «раздувают» блоки — обрезаем на секциях-героях */
+.section-clip,
+.overflow-clip {
+  overflow-x: clip;
+  overflow-y: visible;
+}
