@@ -1,11 +1,12 @@
 // app/auth/callback/route.ts
+// Callback für Magic Link / Signup-Confirm -> tauscht Code gegen Session.
+
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-/**
- * Auth Callback Handler
- * Wird nach E-Mail-Bestätigung oder Magic Link aufgerufen
- */
+export const preferredRegion: string[] = ['fra1']
+export const runtime = 'nodejs' // stabil mit @supabase/ssr
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -14,13 +15,8 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-    if (!error) {
-      // Erfolgreicher Login - zum Dashboard weiterleiten
-      return NextResponse.redirect(`${origin}${next}`)
-    }
+    if (!error) return NextResponse.redirect(`${origin}${next}`)
   }
 
-  // Auth-Fehler - zurück zum Login
   return NextResponse.redirect(`${origin}/login?error=auth_failed`)
 }

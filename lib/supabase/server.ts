@@ -1,36 +1,37 @@
 // lib/supabase/server.ts
-import { Database } from '@/types/database'
+// Server-seitiger Supabase-Client + kleine Helfer.
+// Setzt und liest Auth-Cookies automatisch.
+
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-/**
- * Server-seitiger Supabase Client für Server Components, Route Handlers & Middleware
- * Verwaltet Cookies automatisch für Auth-Session
- */
-export async function createClient() {
-  const cookieStore = await cookies()
+export function createClient() {
+  const cookieStore = cookies()
 
-  return createServerClient<Database>(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
+        // Holt ein Cookie (nur Wert)
         get(name: string) {
           return cookieStore.get(name)?.value
         },
+        // Setzt/aktualisiert ein Cookie (Route Handler / Server Actions)
         set(name: string, value: string, options: CookieOptions) {
+          // In Server Components ist "set" ggf. read-only — in Route Handlers ok.
           try {
             cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // Cookie-Fehler in Server Components ignorieren (z.B. während Prerendering)
-            // Wird in Route Handlers korrekt funktionieren
+          } catch {
+            // Ignorieren, falls im Kontext nicht erlaubt (z. B. RSC)
           }
         },
+        // Entfernt ein Cookie (setzt leeren Wert)
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
-            // Cookie-Fehler ignorieren
+          } catch {
+            // Ignorieren, falls im Kontext nicht erlaubt
           }
         },
       },
@@ -38,22 +39,18 @@ export async function createClient() {
   )
 }
 
-/**
- * Holt die aktuelle Benutzersession (Server-seitig)
- */
+// Gibt den aktuellen Benutzer zurück (oder null)
 export async function getUser() {
-  const supabase = await createClient()
+  const supabase = createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   return user
 }
 
-/**
- * Holt die aktuelle Session (Server-seitig)
- */
+// Gibt die aktuelle Session zurück (oder null)
 export async function getSession() {
-  const supabase = await createClient()
+  const supabase = createClient()
   const {
     data: { session },
   } = await supabase.auth.getSession()

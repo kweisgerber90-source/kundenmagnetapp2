@@ -1,22 +1,18 @@
 // app/app/layout.tsx
+// Geschütztes App-Layout (prüft Auth serverseitig)
+
 import { getUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import type { ReactNode } from 'react'
 
-/**
- * Protected App Layout
- * Schützt alle /app/* Routes - nur für authentifizierte Benutzer
- */
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hier kommt später die App-Navigation (Sidebar, etc.) */}
-      <main>{children}</main>
+      {/* App-Navigation folgt in Schritt 3A */}
+      <main className="mx-auto max-w-5xl p-6">{children}</main>
     </div>
   )
 }

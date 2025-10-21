@@ -1,13 +1,12 @@
 // lib/supabase/client.ts
-import { Database } from '@/types/database'
+// Client-seitiger Supabase-Client (SSR-kompatibel)
+// Kommentare auf Deutsch wie gewünscht.
+
 import { createBrowserClient } from '@supabase/ssr'
 
-/**
- * Client-seitiger Supabase Client für Browser/Client Components
- * Verwendet automatisches Cookie-Management via @supabase/ssr
- */
 export function createClient() {
-  return createBrowserClient<Database>(
+  // HINWEIS: URL und ANON KEY kommen aus der .env / Vercel-Umgebung.
+  return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
