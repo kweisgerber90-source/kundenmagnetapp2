@@ -27,7 +27,7 @@ export default function RegisterPage() {
       password,
       options: {
         data: { company },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     })
 
