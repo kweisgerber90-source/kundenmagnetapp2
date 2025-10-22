@@ -1,6 +1,11 @@
-// app/app/layout.tsx
-// Geschütztes App-Layout (prüft Auth serverseitig)
+// /app/app/layout.tsx
+// ----------------------------------------------------------------------------
+// Geschütztes App-Layout mit Sidebar (serverseitige Auth-Prüfung)
+// ----------------------------------------------------------------------------
 
+import { AppHeader } from '@/components/app-shell/app-header'
+import { AppSidebar } from '@/components/app-shell/app-sidebar'
+import { MobileMenu } from '@/components/app-shell/mobile-menu'
 import { getUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
@@ -11,8 +16,20 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* App-Navigation folgt in Schritt 3A */}
-      <main className="mx-auto max-w-5xl p-6">{children}</main>
+      {/* Desktop: permanente Sidebar */}
+      <div className="hidden lg:block">
+        <AppSidebar />
+      </div>
+
+      {/* Mobile: Topbar + Drawer */}
+      <MobileMenu />
+
+      {/* Inhalt rechts der Sidebar */}
+      <div className="lg:pl-64">
+        {/* 🔒 Header zeigt angemeldeten Benutzer */}
+        <AppHeader user={{ email: user.email || '', name: user.user_metadata?.name }} />
+        <main className="p-6">{children}</main>
+      </div>
     </div>
   )
 }
