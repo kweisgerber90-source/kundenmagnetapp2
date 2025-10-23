@@ -9,6 +9,7 @@ import { MobileMenu } from '@/components/app-shell/mobile-menu'
 import { getUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { Toaster } from 'sonner' // 🔔 Toasts einbinden
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getUser()
@@ -16,6 +17,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 🔔 Toaster für Benachrichtigungen */}
+      <Toaster position="top-right" richColors />
+
       {/* Desktop: permanente Sidebar */}
       <div className="hidden lg:block">
         <AppSidebar />
