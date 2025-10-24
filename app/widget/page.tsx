@@ -1,4 +1,4 @@
-// /app/app/widget/page.tsx
+// /app/widget/page.tsx
 'use client'
 
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Check, Code2, Copy, ExternalLink } from 'lucide-react'
+import { Check, Copy, ExternalLink } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -26,7 +26,7 @@ export default function WidgetConfiguratorPage() {
   const [copied, setCopied] = useState<string | null>(null)
 
   const scriptCode = `<!-- Kundenmagnet Widget -->
-<div
+<div 
   data-kundenmagnet-widget
   data-campaign="${config.campaign}"
   data-limit="${config.limit}"
@@ -279,33 +279,6 @@ export default function WidgetConfiguratorPage() {
           </div>
         </Card>
       </div>
-
-      {/* Preview-Hinweis */}
-      <Card className="mt-8 p-6">
-        <div className="flex items-start gap-4">
-          <div className="rounded-full bg-blue-100 p-3">
-            <Code2 className="h-6 w-6 text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="mb-2 text-lg font-semibold">Widget testen</h3>
-            <p className="mb-4 text-gray-600">
-              Testen Sie das Widget in Echtzeit auf einer Test-Seite oder direkt im iFrame.
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" asChild>
-                <a href={`/widget/frame?campaign=${config.campaign}`} target="_blank">
-                  iFrame-Vorschau öffnen
-                </a>
-              </Button>
-              <Button variant="outline" asChild>
-                <a href="/docs/widget" target="_blank">
-                  Dokumentation
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
     </div>
   )
 }
