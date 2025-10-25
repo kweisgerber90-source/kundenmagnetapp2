@@ -1,0 +1,200 @@
+// lib/i18n/translations/de.ts
+/**
+ * Deutsche Übersetzungen für Kundenmagnetapp
+ * Basis-Lokalisierung für den DACH-Raum
+ */
+
+import type { Translations } from '../types'
+
+export const de: Translations = {
+  common: {
+    appName: 'Kundenmagnetapp',
+    loading: 'Lädt...',
+    error: 'Fehler',
+    success: 'Erfolgreich',
+    cancel: 'Abbrechen',
+    save: 'Speichern',
+    delete: 'Löschen',
+    edit: 'Bearbeiten',
+    create: 'Erstellen',
+    back: 'Zurück',
+    next: 'Weiter',
+    previous: 'Vorherige',
+    close: 'Schließen',
+    confirm: 'Bestätigen',
+    search: 'Suchen',
+    filter: 'Filtern',
+    sort: 'Sortieren',
+    actions: 'Aktionen',
+    status: 'Status',
+    date: 'Datum',
+    email: 'E-Mail',
+    name: 'Name',
+    description: 'Beschreibung',
+    optional: 'Optional',
+    required: 'Pflichtfeld',
+    yes: 'Ja',
+    no: 'Nein',
+    or: 'oder',
+    and: 'und',
+  },
+
+  auth: {
+    login: 'Anmelden',
+    logout: 'Abmelden',
+    register: 'Registrieren',
+    forgotPassword: 'Passwort vergessen?',
+    resetPassword: 'Passwort zurücksetzen',
+    emailLabel: 'E-Mail-Adresse',
+    passwordLabel: 'Passwort',
+    nameLabel: 'Ihr Name',
+    loginButton: 'Jetzt anmelden',
+    registerButton: 'Kostenlos registrieren',
+    alreadyHaveAccount: 'Bereits ein Konto?',
+    dontHaveAccount: 'Noch kein Konto?',
+    magicLinkSent: 'Magic Link wurde versendet',
+    checkYourEmail: 'Bitte überprüfen Sie Ihre E-Mails',
+    invalidCredentials: 'Ungültige Anmeldedaten',
+    passwordTooShort: 'Passwort muss mindestens 8 Zeichen lang sein',
+    emailRequired: 'E-Mail-Adresse ist erforderlich',
+    passwordRequired: 'Passwort ist erforderlich',
+  },
+
+  marketing: {
+    hero: {
+      title: 'Sammeln Sie Kundenbewertungen ohne E-Mail Ping-Pong',
+      subtitle:
+        'Die einfachste Lösung für DACH-Unternehmen, um authentische Testimonials zu sammeln, zu moderieren und auf Ihrer Website einzubetten.',
+      ctaPrimary: '14 Tage kostenlos testen',
+      ctaSecondary: 'Mehr erfahren',
+    },
+    features: {
+      title: 'Alles für perfekte Kundenbewertungen',
+      subtitle:
+        'Sammeln, moderieren und präsentieren Sie Ihre Testimonials professionell und DSGVO-konform',
+    },
+    pricing: {
+      title: 'Transparente Preise für jeden Bedarf',
+      subtitle: 'Wählen Sie das passende Paket für Ihr Unternehmen',
+      priceNote: 'Alle Preise zzgl. 19% MwSt.',
+      ctaTrial: '14 Tage kostenlos testen',
+      perMonth: 'pro Monat',
+      starter: {
+        name: 'Starter',
+        description: 'Perfekt für Einzelunternehmer und kleine Unternehmen',
+        price: '9 €',
+      },
+      pro: {
+        name: 'Pro',
+        description: 'Für wachsende Unternehmen mit mehr Kampagnen',
+        price: '19 €',
+      },
+      business: {
+        name: 'Business',
+        description: 'Für Agenturen und Unternehmen mit hohem Volumen',
+        price: '39 €',
+      },
+    },
+    footer: {
+      company: 'Unternehmen',
+      product: 'Produkt',
+      support: 'Support',
+      legal: 'Rechtliches',
+      followUs: 'Folgen Sie uns',
+      allRightsReserved: 'Alle Rechte vorbehalten.',
+    },
+  },
+
+  app: {
+    nav: {
+      dashboard: 'Dashboard',
+      campaigns: 'Kampagnen',
+      testimonials: 'Bewertungen',
+      widget: 'Widget',
+      qrCodes: 'QR-Codes',
+      settings: 'Einstellungen',
+      billing: 'Abrechnung',
+    },
+    campaigns: {
+      title: 'Kampagnen',
+      create: 'Neue Kampagne erstellen',
+      noCampaigns: 'Noch keine Kampagnen vorhanden',
+      createFirst: 'Erstellen Sie Ihre erste Kampagne, um Bewertungen zu sammeln',
+      active: 'Aktiv',
+      inactive: 'Inaktiv',
+      draft: 'Entwurf',
+    },
+    testimonials: {
+      title: 'Bewertungen',
+      pending: 'Ausstehend',
+      approved: 'Genehmigt',
+      hidden: 'Verborgen',
+      moderate: 'Moderieren',
+      approve: 'Freigeben',
+      hide: 'Verbergen',
+      anonymize: 'Anonymisieren',
+      noTestimonials: 'Noch keine Bewertungen vorhanden',
+    },
+    widget: {
+      title: 'Widget',
+      preview: 'Vorschau',
+      install: 'Installieren',
+      customize: 'Anpassen',
+      noWidget: 'Noch kein Widget konfiguriert',
+    },
+    qr: {
+      title: 'QR-Codes',
+      create: 'Neuen QR-Code erstellen',
+      download: 'Herunterladen',
+      print: 'Drucken',
+      noQrCodes: 'Noch keine QR-Codes vorhanden',
+    },
+    settings: {
+      title: 'Einstellungen',
+      profile: 'Profil',
+      account: 'Konto',
+      notifications: 'Benachrichtigungen',
+      privacy: 'Datenschutz',
+    },
+    billing: {
+      title: 'Abrechnung',
+      currentPlan: 'Aktueller Plan',
+      upgrade: 'Upgrade',
+      downgrade: 'Downgrade',
+      cancel: 'Kündigen',
+      manageSubscription: 'Abonnement verwalten',
+      invoices: 'Rechnungen',
+    },
+  },
+
+  legal: {
+    imprint: 'Impressum',
+    privacy: 'Datenschutzerklärung',
+    terms: 'AGB',
+    dpa: 'Auftragsverarbeitungsvertrag',
+    cookiePolicy: 'Cookie-Richtlinie',
+  },
+
+  errors: {
+    notFound: 'Seite nicht gefunden',
+    unauthorized: 'Nicht autorisiert',
+    forbidden: 'Zugriff verweigert',
+    serverError: 'Serverfehler',
+    networkError: 'Netzwerkfehler',
+    validationError: 'Validierungsfehler',
+    tryAgain: 'Bitte versuchen Sie es erneut',
+    contactSupport: 'Kontaktieren Sie unseren Support',
+  },
+
+  notifications: {
+    campaignCreated: 'Kampagne erfolgreich erstellt',
+    campaignUpdated: 'Kampagne erfolgreich aktualisiert',
+    campaignDeleted: 'Kampagne erfolgreich gelöscht',
+    testimonialApproved: 'Bewertung freigegeben',
+    testimonialHidden: 'Bewertung verborgen',
+    testimonialAnonymized: 'Bewertung anonymisiert',
+    settingsSaved: 'Einstellungen gespeichert',
+    emailSent: 'E-Mail wurde versendet',
+    qrCodeCreated: 'QR-Code erfolgreich erstellt',
+  },
+}
