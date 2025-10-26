@@ -24,6 +24,8 @@ export const BRAND = {
   // Verantwortliche Person / Eigentümer
   owner: 'Klaus Weisgerber',
 
+  supportEmail: 'support@kundenmagnet-app.de',
+
   // Geschäftsanschrift laut Impressum
   address: {
     street: 'Eibenweg 1',

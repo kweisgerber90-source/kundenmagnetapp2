@@ -53,10 +53,10 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>
 
-let env: Env | undefined
+let _envCache: Env | undefined
 
 export function getEnv(): Env {
-  if (env) return env
+  if (_envCache) return _envCache
 
   const parsed = envSchema.safeParse(process.env)
 
@@ -78,8 +78,8 @@ export function getEnv(): Env {
     throw new Error('Invalid environment variables')
   }
 
-  env = parsed.data
-  return env
+  _envCache = parsed.data
+  return _envCache
 }
 
 // Validate required environment variables (for production)
@@ -128,3 +128,10 @@ export const config = {
   isDevelopment: process.env.NODE_ENV === 'development',
   isTest: process.env.NODE_ENV === 'test',
 }
+
+// Export env singleton (lazy-loaded)
+export const env = new Proxy({} as Env, {
+  get(_target, prop: string) {
+    return getEnv()[prop as keyof Env]
+  },
+})
