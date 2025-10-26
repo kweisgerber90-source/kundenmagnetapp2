@@ -1,14 +1,14 @@
-// app/api/export/audit-logs/route.ts
+// /app/api/export/audit-logs/route.ts
 /**
  * API Route: CSV-Export für Audit Logs
- * GET /api/export/audit-logs?action=create&entity_type=campaign
+ * GET /api/export/audit-logs
  *
  * Query-Parameter:
- * - action (optional): Filter nach Aktion (create, update, delete, etc.)
- * - entity_type (optional): Filter nach Entitätstyp (campaign, testimonial, etc.)
- * - date_from (optional): Von-Datum (ISO)
- * - date_to (optional): Bis-Datum (ISO)
- * - format (optional): Datumsformat (iso, de) - Standard: de
+ * - action (optional)
+ * - target (optional)
+ * - date_from | dateFrom (optional)  // ISO
+ * - date_to   | dateTo   (optional)  // ISO
+ * - format (optional): 'iso' | 'de' (andere Werte werden auf 'de' gemappt)
  */
 
 import { createCSVResponse, createTimestampedFilename, exportAuditLogsToCSV } from '@/lib/csv'
@@ -19,10 +19,32 @@ import { NextRequest } from 'next/server'
 export const runtime = 'nodejs'
 export const preferredRegion = ['fra1']
 
+type AuditLogRow = {
+  id: number
+  actor: string | null
+  action: string
+  target: string
+  meta: Record<string, unknown> | null
+  created_at: string
+}
+
+type Profile = { id: string; email: string; name: string | null }
+
+// 🔧 Korrektur: Nur die erlaubten Formate der CSV-Utils
+type DateFormat = 'iso' | 'de'
+
+// 🔧 Korrektur: Normalisiert beliebige Eingaben auf einen gültigen Wert
+function normalizeDateFormat(input: string | null): DateFormat {
+  const v = (input ?? '').toLowerCase()
+  if (v === 'iso') return 'iso'
+  // alles andere → 'de' (Standard)
+  return 'de'
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Authentifizierung prüfen
-    const supabase = await createClient()
+    // 🔒 Authentifizierung
+    const supabase = createClient() // Fabrik ist synchron
     const {
       data: { user },
       error: authError,
@@ -35,54 +57,32 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Query-Parameter extrahieren
-    const searchParams = request.nextUrl.searchParams
-    const action = searchParams.get('action')
-    const entityType = searchParams.get('entity_type')
-    const dateFrom = searchParams.get('date_from')
-    const dateTo = searchParams.get('date_to')
-    const dateFormat = (searchParams.get('format') || 'de') as 'iso' | 'de'
+    // Query-Parameter
+    const sp = request.nextUrl.searchParams
+    const action = sp.get('action') || undefined
+    const target = sp.get('target') || undefined
 
-    // Query aufbauen
+    // beide Schreibweisen akzeptieren
+    const dateFrom = sp.get('date_from') || sp.get('dateFrom') || undefined
+    const dateTo = sp.get('date_to') || sp.get('dateTo') || undefined
+
+    // 🔧 Korrektur: auf gültigen Typ mappen, чтобы TS2322 исчез
+    const dateFormat: DateFormat = normalizeDateFormat(sp.get('format'))
+
+    // Kein implicit join auf users!inner(email)
+    const MAX_EXPORT = 10000
     let query = supabase
       .from('audit_log')
-      .select(
-        `
-        id,
-        user_id,
-        users!inner(email),
-        action,
-        entity_type,
-        entity_id,
-        old_values,
-        new_values,
-        ip_hash,
-        created_at
-      `,
-      )
-      .eq('user_id', user.id)
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(MAX_EXPORT)
+    // RLS lässt nur eigene Einträge zu (actor = auth.uid())
 
-    // Filter anwenden
-    if (action) {
-      query = query.eq('action', action)
-    }
-    if (entityType) {
-      query = query.eq('entity_type', entityType)
-    }
-    if (dateFrom) {
-      query = query.gte('created_at', dateFrom)
-    }
-    if (dateTo) {
-      query = query.lte('created_at', dateTo)
-    }
+    if (action) query = query.eq('action', action)
+    if (target) query = query.eq('target', target)
+    if (dateFrom) query = query.gte('created_at', dateFrom)
+    if (dateTo) query = query.lte('created_at', dateTo)
 
-    // Sortierung
-    query = query.order('created_at', { ascending: false })
-
-    // Limit für Performance (max. 10.000 Einträge)
-    query = query.limit(10000)
-
-    // Daten abrufen
     const { data: logs, error: fetchError } = await query
 
     if (fetchError) {
@@ -94,46 +94,54 @@ export async function GET(request: NextRequest) {
     }
 
     if (!logs || logs.length === 0) {
-      return new Response(JSON.stringify({ error: 'Keine Daten gefunden' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      // Пустой CSV с заголовком вместо 404
+      const filename = createTimestampedFilename('audit_logs_export')
+      const emptyCsv = exportAuditLogsToCSV([], { filename, dateFormat })
+      return createCSVResponse(emptyCsv, filename)
     }
 
-    // Daten für CSV transformieren
-    const csvRows: AuditLogCSVRow[] = logs.map((log) => {
-      // Type-safe: users kann Array oder Objekt sein
-      const usersData = log.users as unknown
-      let userEmail = ''
+    // Profile separat laden (kein FK nötig)
+    const actorIds = Array.from(
+      new Set((logs as AuditLogRow[]).map((l) => l.actor).filter(Boolean) as string[]),
+    )
 
-      if (Array.isArray(usersData) && usersData.length > 0) {
-        userEmail = usersData[0]?.email || ''
-      } else if (usersData && typeof usersData === 'object' && 'email' in usersData) {
-        userEmail = (usersData as { email: string }).email || ''
+    let profilesMap: Record<string, Profile> = {}
+    if (actorIds.length > 0) {
+      const { data: profiles, error: pErr } = await supabase
+        .from('profiles')
+        .select('id,email,name')
+        .in('id', actorIds)
+
+      if (pErr) {
+        console.error('Profiles fetch error:', pErr)
+      } else if (profiles) {
+        profilesMap = profiles.reduce<Record<string, Profile>>((acc, p) => {
+          acc[p.id] = p
+          return acc
+        }, {})
       }
+    }
 
+    // Mapping auf CSV-Row-Struktur eurer Utils
+    const csvRows: AuditLogCSVRow[] = (logs as AuditLogRow[]).map((log) => {
+      const prof = log.actor ? profilesMap[log.actor] : undefined
       return {
-        id: log.id,
-        user_id: log.user_id,
-        user_email: userEmail,
+        id: String(log.id), // falls CSV-Typ строковый
+        user_id: log.actor ?? '',
+        user_email: prof?.email ?? '',
         action: log.action,
-        entity_type: log.entity_type,
-        entity_id: log.entity_id || '',
-        old_values: JSON.stringify(log.old_values || {}),
-        new_values: JSON.stringify(log.new_values || {}),
-        ip_hash: log.ip_hash || '',
+        entity_type: '', // nicht vorhanden in eurer Tabelle
+        entity_id: log.target ?? '',
+        old_values: '', // не разделяем старые/новые
+        new_values: JSON.stringify(log.meta ?? {}),
+        ip_hash: '', // nicht vorhanden in eurer Tabelle
         created_at: log.created_at,
       }
     })
 
-    // CSV generieren
+    // CSV generieren über eure Utils
     const filename = createTimestampedFilename('audit_logs_export')
-    const csv = exportAuditLogsToCSV(csvRows, {
-      filename,
-      dateFormat,
-    })
-
-    // CSV-Response zurückgeben
+    const csv = exportAuditLogsToCSV(csvRows, { filename, dateFormat })
     return createCSVResponse(csv, filename)
   } catch (error) {
     console.error('Export error:', error)
