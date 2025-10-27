@@ -35,17 +35,18 @@ const nextConfig = {
     // Globale Content-Security-Policy
     const globalCsp = [
       "default-src 'self'",
-      // In Prod möglichst 'unsafe-inline'/'unsafe-eval' reduzieren/entfernen
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://cdn.jsdelivr.net",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net",
+      "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https: blob:",
+      "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co",
+      `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com`,
+      "worker-src 'self' blob:",
       "frame-src 'self' https://js.stripe.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "frame-ancestors 'none'", // Global: keine Einbettung erlaubt
+      "frame-ancestors 'none'",
       'upgrade-insecure-requests',
     ].join('; ')
 
