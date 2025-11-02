@@ -32,9 +32,7 @@ export default function QRDetailPage() {
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
 
-  const publicUrl = qrCode 
-  ? `${process.env.NEXT_PUBLIC_APP_BASE_URL || window.location.origin}/q/${qrCode.public_id}` 
-  : ''
+  const publicUrl = qrCode ? `${window.location.origin}/q/${qrCode.public_id}` : ''
 
   useEffect(() => {
     loadQRCode()
