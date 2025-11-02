@@ -7,10 +7,12 @@ const nextConfig = {
   // Entfernt den "X-Powered-By"-Header
   poweredByHeader: false,
 
-  // Bildkonfiguration (lokal unoptimiert, in Prod optimiert Vercel)
+  // Bildkonfiguration
+  // ВАЖНО: Для локальных API-роутов (/api/qr/...) домены НЕ нужны
+  // domains используется только для ВНЕШНИХ источников изображений
   images: {
-    domains: ['localhost', 'kundenmagnet-app-de'],
     unoptimized: process.env.NODE_ENV === 'development',
+    // Убрали domains - не нужны для локальных API-роутов
   },
 
   // Optionale Next-Experimente
@@ -50,7 +52,7 @@ const nextConfig = {
       'upgrade-insecure-requests',
     ].join('; ')
 
-    // CSP für den Widget-iFrame (gezielt gelockert + sandbox)
+    // CSP для den Widget-iFrame (gezielt gelockert + sandbox)
     const widgetFrameCsp = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline'",
