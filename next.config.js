@@ -9,7 +9,7 @@ const nextConfig = {
 
   // Bildkonfiguration (lokal unoptimiert, in Prod optimiert Vercel)
   images: {
-    domains: ['localhost'],
+    domains: ['localhost', 'kundenmagnet-app-de'],
     unoptimized: process.env.NODE_ENV === 'development',
   },
 

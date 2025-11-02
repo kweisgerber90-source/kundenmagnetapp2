@@ -1,79 +1,60 @@
 // app/q/[publicId]/route.ts
-// 🌐 Öffentlicher Redirect-Einstiegspunkt mit Scan-Tracking (anonymisiert).
-// 🔐 DSGVO: IP wird gehasht (Pepper), keine Roh-IP speichern.
-
-import { getEnv } from '@/lib/env'
-import { extractIP, hashIP } from '@/lib/security-utils'
+import { hashIP } from '@/lib/security-utils' // extractIP больше не нужен
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 export const preferredRegion = ['fra1']
 
-type UTM = {
-  utm_source?: string
-  utm_medium?: string
-  utm_campaign?: string
+function getClientIP(headers: Headers): string {
+  // берём первый из возможных прокси-заголовков
+  const xff = headers.get('x-forwarded-for')
+  if (xff && xff.length > 0) return xff.split(',')[0].trim()
+  return (
+    headers.get('x-real-ip') || headers.get('cf-connecting-ip') || '' // пустая строка допустима для hashIP (он всё равно вернёт хэш)
+  )
 }
 
 export async function GET(req: NextRequest, { params }: { params: { publicId: string } }) {
   try {
-    const env = getEnv()
-    const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
 
-    const { data: qr, error: qrErr } = await admin
+    const { data: qr, error } = await supabase
       .from('qr_codes')
-      .select('id, campaign_id, utm_source, utm_medium, utm_campaign, campaigns(slug)')
+      .select('id, public_id, campaigns ( slug )')
       .eq('public_id', params.publicId)
       .single()
 
-    if (qrErr || !qr) {
-      return NextResponse.redirect(`${env.APP_BASE_URL}/404`)
+    if (error || !qr) {
+      return NextResponse.redirect(new URL('/app/qr', req.url), { status: 302 })
     }
 
-    const ip = extractIP(req.ip, req.headers.get('x-forwarded-for'), req.headers.get('x-real-ip'))
-    const ip_hash = await hashIP(ip)
-    const ua = req.headers.get('user-agent') || null
-    const referer = req.headers.get('referer') || null
-
-    const utm: UTM = {
-      utm_source: qr.utm_source || 'qr',
-      utm_medium: qr.utm_medium || 'offline',
-      utm_campaign: qr.utm_campaign || undefined,
-    }
-
-    // 📈 Tracking (best effort) — kein await, keine .catch(): Fehlerbehandlung als 2. Argument von .then()
-    admin
-      .rpc('increment_qr_scan_count', {
-        p_qr_id: qr.id,
-        p_ip_hash: ip_hash,
-        p_user_agent: ua,
-        p_referer: referer,
-        p_utm: utm as unknown as Record<string, unknown>, // 🔧 Korrektur: kein 'any'
+    // 🔒 анонимный лог скана
+    try {
+      const ip = getClientIP(req.headers) // ✅ строка, а не Headers
+      const ipHash = await hashIP(ip)
+      await supabase.from('qr_scans').insert({
+        qr_code_id: qr.id,
+        ip_hash: ipHash,
+        user_agent: req.headers.get('user-agent') || '',
       })
-      .then(
-        () => {
-          // 🔕 Erfolgsfall bewusst ignorieren
-        },
-        (e: unknown) => {
-          // 🔧 Korrektur: Fehler hier behandeln (PromiseLike hat keinen .catch)
-          // eslint-disable-next-line no-console
-          console.error('[qr] track error:', e)
-        },
-      )
+    } catch {
+      // логирование не должно ломать редирект
+    }
 
     const slug = (qr as unknown as { campaigns: { slug: string } }).campaigns.slug
-    const target = new URL(`${env.APP_BASE_URL}/r/${slug}`)
-    if (utm.utm_source) target.searchParams.set('utm_source', utm.utm_source)
-    if (utm.utm_medium) target.searchParams.set('utm_medium', utm.utm_medium)
-    if (utm.utm_campaign) target.searchParams.set('utm_campaign', utm.utm_campaign)
+
+    const origin = req.nextUrl.origin
+    const target = new URL(`/r/${slug}`, origin)
+    target.searchParams.set('utm_source', 'qr')
+    target.searchParams.set('utm_medium', 'offline')
     target.searchParams.set('qr', params.publicId)
 
-    return NextResponse.redirect(target.toString(), { status: 302 })
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[qr] redirect error:', err)
-    const env = getEnv()
-    return NextResponse.redirect(`${env.APP_BASE_URL}/404`)
+    return NextResponse.redirect(target, { status: 302 })
+  } catch {
+    return NextResponse.redirect(new URL('/app/qr', req.url), { status: 302 })
   }
 }
