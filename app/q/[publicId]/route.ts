@@ -71,7 +71,7 @@ export async function GET(req: NextRequest, { params }: { params: { publicId: st
       .from('qr_codes')
       .select('id, public_id, campaigns ( slug )')
       .eq('public_id', params.publicId)
-      .single()
+      .maybeSingle()
 
     if (qrErr || !data) {
       const reason = qrErr?.message || 'not_found'

@@ -72,10 +72,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       .from('qr_codes')
       .select('file_url_svg, file_url_png, user_id')
       .eq('id', params.id)
-      .single<QrRow>()
+      .eq('user_id', user.id)
+      .maybeSingle<QrRow>()
 
     if (qrErr || !qr) {
-      const msg = `QR code not found: ${qrErr?.message ?? 'no row'}`
+      const msg = `QR code not found for this user`
       return debug
         ? new NextResponse(msg, { status: 404 })
         : NextResponse.json({ error: 'QR code not found' }, { status: 404 })
