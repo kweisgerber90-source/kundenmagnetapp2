@@ -1,37 +1,81 @@
 // lib/supabase/server.ts
-// Server-seitiger Supabase-Client + kleine Helfer.
-// Setzt und liest Auth-Cookies automatisch.
+// -----------------------------------------------------------------------------
+// 🧩 Server-seitiger Supabase-Client
+// - Verwaltet Auth-Cookies automatisch (Lesen, Setzen, Entfernen)
+// - Stellt Hilfsfunktionen für getUser() und getSession() bereit
+// - Setzt im Production-Modus das Cookie-Domain-Feld auf ".kundenmagnet-app.de"
+// -----------------------------------------------------------------------------
 
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+/**
+ * Gibt die Cookie-Domain zurück.
+ * - Lokal: undefined
+ * - Produktion: ".kundenmagnet-app.de" (aus APP_BASE_URL oder NEXT_PUBLIC_APP_URL)
+ */
+function getCookieDomain(): string | undefined {
+  try {
+    const baseUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+    const host = new URL(baseUrl).hostname // z. B. "www.kundenmagnet-app.de"
+    const parts = host.split('.')
+    if (parts.length >= 2) {
+      return `.${parts.slice(-2).join('.')}` // → ".kundenmagnet-app.de"
+    }
+  } catch {
+    // Kein valider URL → ignorieren
+  }
+  return undefined
+}
+
+/**
+ * Erstellt den serverseitigen Supabase-Client
+ * mit Cookie-Unterstützung (SSR-kompatibel)
+ */
 export function createClient() {
   const cookieStore = cookies()
+  const cookieDomain = process.env.NODE_ENV === 'production' ? getCookieDomain() : undefined
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // Holt ein Cookie (nur Wert)
+        // Liest ein Cookie (nur den Wert)
         get(name: string) {
           return cookieStore.get(name)?.value
         },
-        // Setzt/aktualisiert ein Cookie (Route Handler / Server Actions)
+        // Setzt oder aktualisiert ein Cookie (z. B. in Route Handlers)
         set(name: string, value: string, options: CookieOptions) {
-          // In Server Components ist "set" ggf. read-only — in Route Handlers ok.
           try {
-            cookieStore.set({ name, value, ...options })
+            cookieStore.set({
+              name,
+              value,
+              ...options,
+              httpOnly: true,
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              domain: cookieDomain,
+            })
           } catch {
-            // Ignorieren, falls im Kontext nicht erlaubt (z. B. RSC)
+            // Ignorieren, falls im RSC-Kontext (read-only)
           }
         },
-        // Entfernt ein Cookie (setzt leeren Wert)
+        // Entfernt ein Cookie (setzt leeren Wert + maxAge = 0)
         remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value: '', ...options })
+            cookieStore.set({
+              name,
+              value: '',
+              ...options,
+              httpOnly: true,
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              domain: cookieDomain,
+              maxAge: 0,
+            })
           } catch {
-            // Ignorieren, falls im Kontext nicht erlaubt
+            // Ignorieren, falls im RSC-Kontext
           }
         },
       },
@@ -39,7 +83,9 @@ export function createClient() {
   )
 }
 
-// Gibt den aktuellen Benutzer zurück (oder null)
+/**
+ * Gibt den aktuell eingeloggten Benutzer zurück (oder null)
+ */
 export async function getUser() {
   const supabase = createClient()
   const {
@@ -48,7 +94,9 @@ export async function getUser() {
   return user
 }
 
-// Gibt die aktuelle Session zurück (oder null)
+/**
+ * Gibt die aktuelle Session zurück (oder null)
+ */
 export async function getSession() {
   const supabase = createClient()
   const {
