@@ -49,7 +49,7 @@ const nextConfig = {
   // Wenn du später direkt aus externen Quellen (z. B. Supabase Storage) lädst,
   // füge remotePatterns hinzu.
   images: {
-    unoptimized: process.env.NODE_ENV === 'development',
+    unoptimized: true,
     // remotePatterns: [
     //   { protocol: 'https', hostname: '**.supabase.co' },
     //   { protocol: 'https', hostname: 'www.kundenmagnet-app.de' },
