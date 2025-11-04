@@ -213,22 +213,38 @@ export default function InstallDocsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <p className="mb-3 text-sm font-medium">
+                  📚 Detaillierte Schritt-für-Schritt Anleitungen verfügbar
+                </p>
+                <Button asChild className="w-full sm:w-auto">
+                  <Link href="/docs/install/platforms" prefetch={false}>
+                    Zu den Plattform-Anleitungen
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {[
-                  { name: 'WordPress', desc: 'Plugin verfügbar' },
-                  { name: 'Shopify', desc: 'App aus dem Store' },
+                  { name: 'WordPress', desc: 'Gutenberg & Elementor' },
+                  { name: 'Shopify', desc: 'Theme-Integration' },
+                  { name: 'Webflow', desc: 'Custom Code & Embed' },
                   { name: 'Wix', desc: 'HTML-Code einbetten' },
                   { name: 'Squarespace', desc: 'Code-Block verwenden' },
-                  { name: 'WooCommerce', desc: 'WordPress Plugin' },
-                  { name: 'Webflow', desc: 'Custom Code hinzufügen' },
+                  { name: 'Shopware', desc: 'Shopping Experiences' },
+                  { name: 'React/Next.js', desc: 'Framework-Integration' },
+                  { name: 'Vue/Nuxt', desc: 'Komponenten-basiert' },
+                  { name: 'Statisches HTML', desc: 'Direkte Integration' },
                 ].map((platform) => (
-                  <div key={platform.name} className="rounded-lg border p-4">
+                  <Link
+                    key={platform.name}
+                    href="/docs/install/platforms"
+                    prefetch={false}
+                    className="rounded-lg border p-4 transition-colors hover:border-primary hover:bg-accent"
+                  >
                     <h4 className="font-medium">{platform.name}</h4>
                     <p className="mt-1 text-xs text-muted-foreground">{platform.desc}</p>
-                    <Button size="sm" variant="outline" className="mt-2 w-full">
-                      Anleitung ansehen
-                    </Button>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </CardContent>
