@@ -39,22 +39,23 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
 
-    // Kampagne abrufen
+    // Kampagne abrufen (RLS-Policies erlauben public read für status='active')
     const { data: campaignData, error: campaignError } = await supabase
       .from('campaigns')
-      .select('id, business_id, name, slug')
+      .select('id, user_id, name, slug')
       .eq('slug', campaign)
-      .eq('is_active', true)
+      .eq('status', 'active')
       .single()
 
     if (campaignError || !campaignData) {
+      console.error('[Widget API] Campaign lookup error:', campaignError)
       return NextResponse.json(
         { error: 'Kampagne nicht gefunden oder deaktiviert' },
         { status: 404, headers },
       )
     }
 
-    // Testimonials abrufen (nur approved)
+    // Testimonials abrufen (nur approved, RLS-Policy erlaubt public read)
     let query = supabase
       .from('testimonials')
       .select('id, rating, name, text, created_at')
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
     const { data: testimonials, error: testimonialsError } = await query
 
     if (testimonialsError) {
-      console.error('Widget API Testimonials Error:', testimonialsError)
+      console.error('[Widget API] Testimonials Error:', testimonialsError)
       return NextResponse.json(
         { error: 'Fehler beim Laden der Bewertungen' },
         { status: 500, headers },
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
       { status: 200, headers },
     )
   } catch (error) {
-    console.error('Widget API Error:', error)
+    console.error('[Widget API] Error:', error)
     return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500, headers })
   }
 }
