@@ -1,12 +1,11 @@
 // /app/widget/frame/page.tsx
-// 🔒 Sicherer iFrame für Widget - verwendet Views ohne E-Mail
-// Basierend auf ChatGPT Security Review
+// Widget-Frame für Embedding: Zeigt nur Testimonials + Auto-Resize per postMessage
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import { Star } from 'lucide-react'
 import { Suspense } from 'react'
 
-interface SearchParams {
+type SearchParams = {
   campaign?: string
   limit?: string
   sort?: string
@@ -14,133 +13,182 @@ interface SearchParams {
 }
 
 async function WidgetFrame({ searchParams }: { searchParams: SearchParams }) {
-  const campaign = searchParams.campaign || ''
-  const limit = Math.min(Math.max(parseInt(searchParams.limit || '10', 10), 1), 50)
-  const sort = (searchParams.sort || 'newest') as 'newest' | 'oldest' | 'rating'
-  const theme = searchParams.theme === 'dark' ? 'dark' : 'light'
+  const { campaign, limit = '10', sort = 'newest', theme = 'light' } = searchParams
 
+  // Validierung
   if (!campaign) {
-    return <div className="p-4 text-red-500">Fehler: Keine Kampagne angegeben</div>
+    return (
+      <div className="p-6 text-center text-red-600">
+        <p className="font-semibold">Fehler: Kein Kampagnen-Slug angegeben</p>
+        <p className="mt-2 text-sm">Bitte fügen Sie ?campaign=ihr-slug zur URL hinzu</p>
+      </div>
+    )
   }
 
-  // Supabase Client (anon key - nur für Views!)
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Limit: 1-50, Default 10
+  const numLimit = Math.min(Math.max(parseInt(limit) || 10, 1), 50)
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return <div className="p-4 text-red-500">Konfigurationsfehler</div>
-  }
+  // Sort: newest | oldest | highest | lowest
+  const validSort = ['newest', 'oldest', 'highest', 'lowest'].includes(sort) ? sort : 'newest'
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  // Supabase Query
+  const supabase = await createClient()
 
-  // 🔒 Nur öffentliche Kampagnen-View (ohne user_id)
   const { data: campaignData } = await supabase
-    .from('public_campaigns')
-    .select('id, name, status, slug')
+    .from('campaigns')
+    .select('id, business_id, name')
     .eq('slug', campaign)
+    .eq('is_active', true)
     .single()
 
-  if (!campaignData || campaignData.status !== 'active') {
-    return <div className="p-4 text-red-500">Kampagne nicht gefunden oder inaktiv</div>
+  if (!campaignData) {
+    return (
+      <div className="p-6 text-center text-red-600">
+        <p className="font-semibold">Kampagne nicht gefunden</p>
+        <p className="mt-2 text-sm">Die angegebene Kampagne existiert nicht oder ist deaktiviert</p>
+      </div>
+    )
   }
 
-  // 🔒 Öffentliche Testimonials-View (OHNE E-Mail)
+  // Testimonials abfragen (nur freigegebene)
   let query = supabase
-    .from('public_testimonials')
-    .select('id, campaign_id, name, text, rating, created_at')
+    .from('testimonials')
+    .select('id, rating, name, text, created_at')
     .eq('campaign_id', campaignData.id)
-    .limit(limit)
+    .eq('status', 'approved')
+    .limit(numLimit)
 
   // Sortierung
-  switch (sort) {
+  switch (validSort) {
     case 'oldest':
       query = query.order('created_at', { ascending: true })
       break
-    case 'rating':
-      query = query
-        .order('rating', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
+    case 'highest':
+      query = query.order('rating', { ascending: false }).order('created_at', { ascending: false })
       break
-    default: // newest
+    case 'lowest':
+      query = query.order('rating', { ascending: true }).order('created_at', { ascending: false })
+      break
+    case 'newest':
+    default:
       query = query.order('created_at', { ascending: false })
   }
 
   const { data: testimonials } = await query
 
-  return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'dark bg-gray-900' : 'bg-white'}`}>
-      <div className="p-4">
-        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-          {campaignData.name}
-        </h3>
+  // Theme-Klassen
+  const isDark = theme === 'dark'
+  const bgClass = isDark ? 'bg-gray-900' : 'bg-white'
+  const textClass = isDark ? 'text-gray-100' : 'text-gray-900'
+  const cardClass = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
 
+  return (
+    <div className={`min-h-screen ${bgClass} ${textClass} p-4`}>
+      <div className="mx-auto max-w-4xl">
+        {/* Header */}
+        <div className="mb-6 text-center">
+          <h2 className="text-2xl font-bold">{campaignData.name}</h2>
+          {testimonials && testimonials.length > 0 && (
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              {testimonials.length} {testimonials.length === 1 ? 'Bewertung' : 'Bewertungen'}
+            </p>
+          )}
+        </div>
+
+        {/* Testimonials */}
         <div className="space-y-4">
           {testimonials?.map((t) => (
-            <div
-              key={t.id}
-              className="rounded-lg border bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
-            >
+            <div key={t.id} className={`rounded-lg border p-4 shadow-sm ${cardClass}`}>
               <div className="mb-2 flex items-center justify-between">
-                <span className="font-medium text-gray-900 dark:text-white">{t.name}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {new Date(t.created_at).toLocaleDateString('de-DE')}
-                </span>
-              </div>
-
-              {t.rating && (
-                <div className="mb-2 flex">
+                <span className="font-semibold">{t.name || 'Anonym'}</span>
+                <div className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                       key={star}
                       className={`h-4 w-4 ${
                         star <= t.rating
                           ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300 dark:text-gray-600'
+                          : isDark
+                            ? 'text-gray-600'
+                            : 'text-gray-300'
                       }`}
                     />
                   ))}
                 </div>
-              )}
-
-              <p className="text-gray-700 dark:text-gray-300">{t.text}</p>
+              </div>
+              <p className={isDark ? 'text-gray-300' : 'text-gray-700'}>{t.text}</p>
+              <p className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                {new Date(t.created_at).toLocaleDateString('de-DE', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
             </div>
           ))}
 
           {!testimonials?.length && (
-            <p className="py-8 text-center text-gray-500 dark:text-gray-400">
-              Noch keine Bewertungen vorhanden
-            </p>
+            <div className="py-12 text-center">
+              <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+                Noch keine Bewertungen vorhanden
+              </p>
+            </div>
           )}
         </div>
 
-        <div className="mt-6 border-t pt-4 text-center">
+        {/* Footer-Branding */}
+        <div
+          className={`mt-8 border-t pt-4 text-center ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
+        >
           <a
             href="https://kundenmagnet-app.de"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-gray-500 hover:text-blue-600"
+            className={`text-xs transition-colors ${
+              isDark ? 'text-gray-500 hover:text-blue-400' : 'text-gray-500 hover:text-blue-600'
+            }`}
           >
             Powered by Kundenmagnet
           </a>
         </div>
       </div>
 
-      {/* Auto-Resize per postMessage */}
+      {/* Auto-Resize Script (sendet Höhe an Parent-Window) */}
       <script
         dangerouslySetInnerHTML={{
           __html: `
 (function() {
   function sendHeight() {
-    var h = document.body.scrollHeight;
-    try { 
-      window.parent.postMessage({ type: 'kundenmagnet-resize', height: h }, '*'); 
-    } catch(e) {}
+    var height = document.documentElement.scrollHeight;
+    try {
+      window.parent.postMessage(
+        { type: 'kundenmagnet-resize', height: height },
+        '*'
+      );
+    } catch (e) {
+      console.error('postMessage failed:', e);
+    }
   }
+
+  // Initial
   sendHeight();
+
+  // Nach Load
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', sendHeight);
+  }
   window.addEventListener('load', sendHeight);
+
+  // Bei Resize
   window.addEventListener('resize', sendHeight);
-  var mo = new MutationObserver(sendHeight);
-  mo.observe(document.body, { childList: true, subtree: true });
+
+  // Bei DOM-Änderungen (z.B. Bilder laden)
+  var observer = new MutationObserver(sendHeight);
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+  });
 })();
           `,
         }}
@@ -153,18 +201,12 @@ export default function WidgetFramePage({ searchParams }: { searchParams: Search
   return (
     <Suspense
       fallback={
-        <div className="p-4 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
         </div>
       }
     >
       <WidgetFrame searchParams={searchParams} />
     </Suspense>
   )
-}
-
-// SEO: iFrame soll nicht indexiert werden
-export const metadata = {
-  title: 'Kundenmagnet Widget',
-  robots: 'noindex, nofollow',
 }

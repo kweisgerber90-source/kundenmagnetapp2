@@ -1,12 +1,13 @@
 // /public/widget.js
-// 🔒 Kundenmagnet Widget v1.0.0 - Shadow DOM mit sicherer API
-// Basierend auf ChatGPT Security Review
+// 🔒 Kundenmagnet Widget v1.0.1 - Shadow DOM mit iFrame Fallback + Auto-Resize
+// Basierend auf ChatGPT Security Review + Embedding Fix
 
 (function () {
   'use strict'
 
-  const WIDGET_VERSION = '1.0.0'
+  const WIDGET_VERSION = '1.0.1'
   const API_BASE_URL = 'https://kundenmagnet-app.de/api/widget'
+  const IFRAME_BASE_URL = 'https://kundenmagnet-app.de/widget/frame'
   const CACHE_KEY = 'km_widget_cache'
   const CACHE_TTL = 5 * 60 * 1000 // 5 Minuten
 
@@ -117,7 +118,7 @@
 
 .testimonial-header {
   display: flex;
-  justify-between;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
@@ -383,26 +384,113 @@
     }
   }
 
+  // iFrame Fallback für Browser ohne Shadow DOM Support
+  function createIframeFallback(container, config) {
+    const params = new URLSearchParams({
+      campaign: config.campaign,
+      limit: config.limit.toString(),
+      sort: config.sort,
+      theme: config.theme,
+    })
+
+    const iframe = document.createElement('iframe')
+    iframe.src = `${IFRAME_BASE_URL}?${params}`
+    iframe.style.cssText = 'width: 100%; border: none; min-height: 400px; display: block;'
+    iframe.title = config.title || 'Kundenbewertungen'
+    iframe.setAttribute('data-kundenmagnet-iframe', config.campaign)
+
+    // Auto-Resize per postMessage
+    const resizeListener = (event) => {
+      // Sicherheit: Nur von kundenmagnet-app.de oder localhost akzeptieren
+      const allowedOrigins = [
+        'https://kundenmagnet-app.de',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+      ]
+
+      if (!allowedOrigins.includes(event.origin)) {
+        return
+      }
+
+      if (event.data && event.data.type === 'kundenmagnet-resize') {
+        // Finde das richtige iFrame (falls mehrere Widgets auf der Seite)
+        const targetIframe = document.querySelector(
+          `iframe[data-kundenmagnet-iframe="${config.campaign}"]`,
+        )
+        if (targetIframe) {
+          targetIframe.style.height = event.data.height + 'px'
+        }
+      }
+    }
+
+    window.addEventListener('message', resizeListener)
+
+    container.innerHTML = ''
+    container.appendChild(iframe)
+
+    // eslint-disable-next-line no-console
+    console.log('[Kundenmagnet Widget] iFrame Fallback verwendet für:', config.campaign)
+  }
+
   // Auto-Init für alle Container
   function initWidgets() {
     const containers = document.querySelectorAll('[data-kundenmagnet-widget]')
+
     containers.forEach((container) => {
-      if (!container.shadowRoot) {
-        new KundenmagnetWidget(container)
+      // Skip wenn bereits initialisiert
+      if (container.shadowRoot || container.querySelector('iframe[data-kundenmagnet-iframe]')) {
+        return
+      }
+
+      const config = {
+        campaign: container.dataset.campaign || '',
+        limit: parseInt(container.dataset.limit || '10', 10),
+        sort: container.dataset.sort || 'newest',
+        theme: container.dataset.theme || 'light',
+        title: container.dataset.title || 'Kundenbewertungen',
+        showRating: container.dataset.showRating !== 'false',
+        animation: container.dataset.animation !== 'false',
+      }
+
+      if (!config.campaign) {
+        console.error('[Kundenmagnet Widget] Fehler: data-campaign fehlt', container)
+        container.innerHTML =
+          '<div style="color: red; padding: 1rem;">Widget-Fehler: Kampagnen-Slug fehlt</div>'
+        return
+      }
+
+      // Prüfe Shadow DOM Support
+      if (typeof container.attachShadow === 'function') {
+        try {
+          new KundenmagnetWidget(container)
+          // eslint-disable-next-line no-console
+          console.log('[Kundenmagnet Widget] Shadow DOM verwendet für:', config.campaign)
+        } catch (error) {
+          console.error('[Kundenmagnet Widget] Shadow DOM Fehler:', error)
+          // Fallback bei Fehler
+          createIframeFallback(container, config)
+        }
+      } else {
+        // Fallback zu iFrame für alte Browser
+        createIframeFallback(container, config)
+        // eslint-disable-next-line no-console
+        console.log('[Kundenmagnet Widget] Browser unterstützt kein Shadow DOM')
       }
     })
   }
 
-  // Init nach DOMContentLoaded
+  // Init nach DOMContentLoaded oder sofort wenn DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initWidgets)
   } else {
+    // DOM ist bereits geladen
     initWidgets()
   }
 
-  // Global verfügbar machen
+  // Global verfügbar machen (für manuelle Initialisierung)
   window.KundenmagnetWidget = KundenmagnetWidget
+  window.initKundenmagnetWidgets = initWidgets
 
   // eslint-disable-next-line no-console
-  console.log(`[Kundenmagnet Widget v${WIDGET_VERSION}] Loaded`)
+  console.log(`[Kundenmagnet Widget v${WIDGET_VERSION}] Loaded successfully`)
 })()

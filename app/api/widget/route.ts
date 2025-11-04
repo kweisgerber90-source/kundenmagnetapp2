@@ -1,292 +1,126 @@
 // /app/api/widget/route.ts
-// 🔒 Sichere Widget-API mit CORS-Allowlist, Node-Runtime und E-Mail-Maskierung
-// Basierend auf ChatGPT Security Review
+// Public API für Widget-Testimonials (CORS enabled)
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 
-// =============================================================================
-// RUNTIME & REGION
-// =============================================================================
-// ⚠️ KRITISCH: Node-Runtime verwenden, nicht Edge!
-// Service-Role Key darf niemals an Edge-Runtime geleakt werden
-export const runtime = 'nodejs'
-export const preferredRegion = ['fra1']
+export const runtime = 'edge'
 
-// =============================================================================
-// CORS-ALLOWLIST (keine Origin-Reflexion!)
-// =============================================================================
-const DEFAULT_ALLOWED_ORIGINS = [
-  'https://kundenmagnet-app.de',
-  'https://www.kundenmagnet-app.de',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-]
-
-function getAllowedOrigins(): string[] {
-  const fromEnv =
-    process.env.WIDGET_CORS_ALLOW_ORIGINS?.split(',')
-      .map((s) => s.trim())
-      .filter(Boolean) || []
-
-  return Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, ...fromEnv]))
-}
-
-function isAllowedOrigin(origin: string | null): origin is string {
-  if (!origin) return false
-
-  const allowed = getAllowedOrigins()
-  try {
-    const originUrl = new URL(origin)
-    return allowed.some((allowedOrigin) => {
-      const allowedUrl = new URL(allowedOrigin)
-      return allowedUrl.origin === originUrl.origin
-    })
-  } catch {
-    return false
-  }
-}
-
-function buildCorsHeaders(origin: string | null) {
-  const varyHeader = { Vary: 'Origin' }
-
-  if (isAllowedOrigin(origin)) {
-    return {
-      ...varyHeader,
-      'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400',
-    }
-  }
-
-  // Für Same-Site Requests ohne Origin-Header keine CORS-Header nötig
-  return varyHeader
-}
-
-// =============================================================================
-// QUERY-PARAMETER VALIDATION
-// =============================================================================
-const widgetQuerySchema = z.object({
-  campaign: z.string().min(1, 'Kampagnen-Slug erforderlich'),
-  limit: z.coerce.number().int().positive().max(50).optional().default(10),
-  sort: z.enum(['newest', 'oldest', 'rating']).optional().default('newest'),
-})
-
-// =============================================================================
-// OPTIONS HANDLER (CORS Preflight)
-// =============================================================================
-export async function OPTIONS(req: NextRequest) {
-  const origin = req.headers.get('origin')
-  const corsHeaders = buildCorsHeaders(origin)
-
-  return new NextResponse(null, {
-    status: 204,
-    headers: corsHeaders,
-  })
-}
-
-// =============================================================================
-// GET HANDLER (Widget-Daten)
-// =============================================================================
 export async function GET(request: NextRequest) {
-  const origin = request.headers.get('origin')
-  const corsHeaders = buildCorsHeaders(origin)
+  const searchParams = request.nextUrl.searchParams
+  const campaign = searchParams.get('campaign')
+  const limit = searchParams.get('limit') || '10'
+  const sort = searchParams.get('sort') || 'newest'
 
-  // 1) Origin-Check: Wenn Origin vorhanden ist, muss er erlaubt sein
-  if (origin && !isAllowedOrigin(origin)) {
+  // CORS Headers
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json',
+    'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+  }
+
+  // Validierung: campaign erforderlich
+  if (!campaign) {
     return NextResponse.json(
-      { error: 'Origin not allowed' },
-      {
-        status: 403,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      },
+      { error: 'Parameter "campaign" ist erforderlich' },
+      { status: 400, headers },
     )
   }
 
+  // Limit: 1-50, Default 10
+  const numLimit = Math.min(Math.max(parseInt(limit) || 10, 1), 50)
+
+  // Sort: newest | oldest | highest | lowest
+  const validSorts = ['newest', 'oldest', 'highest', 'lowest']
+  const validSort = validSorts.includes(sort) ? sort : 'newest'
+
   try {
-    // 2) Query-Parameter validieren
-    const searchParams = request.nextUrl.searchParams
-    const parsed = widgetQuerySchema.safeParse({
-      campaign: searchParams.get('campaign'),
-      limit: searchParams.get('limit'),
-      sort: searchParams.get('sort'),
-    })
+    const supabase = await createClient()
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: 'Invalid parameters',
-          details: parsed.error.flatten(),
-        },
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        },
-      )
-    }
-
-    const { campaign, limit, sort } = parsed.data
-
-    // 3) Supabase-Client mit Service-Role (Server-only!)
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !serviceKey) {
-      console.error('[widget-api] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-      return NextResponse.json(
-        { error: 'Service misconfigured' },
-        {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        },
-      )
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    })
-
-    // 4) Kampagne prüfen (via View - sicherer)
+    // Kampagne abrufen
     const { data: campaignData, error: campaignError } = await supabase
-      .from('public_campaigns')
-      .select('id, name, status')
+      .from('campaigns')
+      .select('id, business_id, name, slug')
       .eq('slug', campaign)
+      .eq('is_active', true)
       .single()
 
     if (campaignError || !campaignData) {
       return NextResponse.json(
-        { error: 'Campaign not found' },
-        {
-          status: 404,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-store',
-          },
-        },
+        { error: 'Kampagne nicht gefunden oder deaktiviert' },
+        { status: 404, headers },
       )
     }
 
-    if (campaignData.status !== 'active') {
-      return NextResponse.json(
-        {
-          error: 'Campaign is not active',
-          campaign: {
-            name: campaignData.name,
-            status: campaignData.status,
-          },
-        },
-        {
-          status: 403,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        },
-      )
-    }
-
-    // 5) Testimonials laden (mit Service-Role, daher direkte Tabelle)
-    //    ⚠️ WICHTIG: E-Mail-Maskierung beim Output!
+    // Testimonials abrufen (nur approved)
     let query = supabase
       .from('testimonials')
-      .select('id, name, email, text, rating, created_at')
+      .select('id, rating, name, text, created_at')
       .eq('campaign_id', campaignData.id)
       .eq('status', 'approved')
-      .is('deleted_at', null)
-      .limit(limit)
+      .limit(numLimit)
 
-    // Sortierung
-    switch (sort) {
+    // Sortierung anwenden
+    switch (validSort) {
       case 'oldest':
         query = query.order('created_at', { ascending: true })
         break
-      case 'rating':
+      case 'highest':
         query = query
-          .order('rating', { ascending: false, nullsFirst: false })
+          .order('rating', { ascending: false })
           .order('created_at', { ascending: false })
         break
-      default: // newest
+      case 'lowest':
+        query = query.order('rating', { ascending: true }).order('created_at', { ascending: false })
+        break
+      case 'newest':
+      default:
         query = query.order('created_at', { ascending: false })
     }
 
     const { data: testimonials, error: testimonialsError } = await query
 
     if (testimonialsError) {
-      console.error('[widget-api] Database error:', testimonialsError)
+      console.error('Widget API Testimonials Error:', testimonialsError)
       return NextResponse.json(
-        { error: 'Failed to fetch testimonials' },
-        {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        },
+        { error: 'Fehler beim Laden der Bewertungen' },
+        { status: 500, headers },
       )
     }
 
-    // 6) E-Mail-Maskierung (PII-Minimierung)
-    const sanitized = (testimonials || []).map((t) => ({
-      id: t.id,
-      name: t.name,
-      // 🔒 KRITISCH: E-Mail nie vollständig herausgeben
-      // Beispiel: test@example.com → te***@example.com
-      email: t.email ? t.email.replace(/^(.{2}).*(@.*)$/, '$1***$2') : null,
-      text: t.text,
-      rating: t.rating,
-      created_at: t.created_at,
-    }))
-
-    // 7) Response mit Cache-Headers
+    // Erfolgreiche Response
     return NextResponse.json(
       {
         campaign: {
           id: campaignData.id,
           name: campaignData.name,
+          slug: campaignData.slug,
         },
-        testimonials: sanitized,
+        testimonials: testimonials || [],
         meta: {
-          count: sanitized.length,
-          limit,
-          sort,
+          count: testimonials?.length || 0,
+          limit: numLimit,
+          sort: validSort,
         },
       },
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-          // Edge/Proxy-Caching (stale-while-revalidate)
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-        },
-      },
+      { status: 200, headers },
     )
   } catch (error) {
-    console.error('[widget-api] Unexpected error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      },
-    )
+    console.error('Widget API Error:', error)
+    return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500, headers })
   }
+}
+
+// OPTIONS für CORS Preflight
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
 }
