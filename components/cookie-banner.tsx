@@ -11,6 +11,12 @@ import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export function CookieBanner() {
+  // FRÜHER Check: Wenn im iFrame, rendere gar nicht erst
+  const [isInIframe] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.self !== window.top
+  })
+
   const [isVisible, setIsVisible] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
   const [categories, setCategories] = useState<ConsentCategories>({
@@ -31,6 +37,9 @@ export function CookieBanner() {
     window.addEventListener('km-consent-updated', handler as EventListener)
     return () => window.removeEventListener('km-consent-updated', handler as EventListener)
   }, [])
+
+  // Wenn im iFrame, rendere nichts
+  if (isInIframe) return null
 
   const consentText = `Wir verwenden Cookies, um Ihre Erfahrung zu verbessern. Essenzielle Cookies sind für die Funktion der Website erforderlich. Analytics-Cookies helfen uns, die Nutzung zu verstehen. Marketing-Cookies werden für personalisierte Werbung verwendet. Sie können Ihre Einstellungen jederzeit in den Datenschutzeinstellungen ändern.`
 
