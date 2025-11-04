@@ -36,9 +36,9 @@ async function WidgetFrame({ searchParams }: { searchParams: SearchParams }) {
 
   const { data: campaignData } = await supabase
     .from('campaigns')
-    .select('id, business_id, name')
+    .select('id, user_id, name')
     .eq('slug', campaign)
-    .eq('is_active', true)
+    .eq('status', 'active')
     .single()
 
   if (!campaignData) {
