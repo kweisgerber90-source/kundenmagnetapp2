@@ -111,7 +111,11 @@ export default function WidgetConfiguratorPage() {
     { value: 'colorful', label: 'Bunt' },
   ]
 
-  const deviceButtons: { value: Device; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
+  const deviceButtons: {
+    value: Device
+    icon: React.ComponentType<{ className?: string }>
+    label: string
+  }[] = [
     { value: 'desktop', icon: Monitor, label: 'Desktop' },
     { value: 'tablet', icon: Tablet, label: 'Tablet' },
     { value: 'mobile', icon: Smartphone, label: 'Mobile' },
@@ -274,9 +278,7 @@ export default function WidgetConfiguratorPage() {
                       placeholder="test"
                       className="mt-2"
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Der Slug Ihrer Kampagne (aus dem Dashboard)
-                    </p>
+                    <p className="mt-1 text-xs text-gray-500">Der Slug Ihrer Kampagne</p>
                   </div>
 
                   <div>
@@ -413,8 +415,8 @@ export default function WidgetConfiguratorPage() {
                     <p className="mb-2 font-medium text-blue-900">💡 Tipp:</p>
                     <p className="text-blue-700">
                       Das Widget passt sich automatisch an die Breite des Container-Elements an. Sie
-                      können weitere Optionen wie data-columns=&quot;2&quot; oder data-show-rating=&quot;false&quot;
-                      hinzufügen.
+                      können weitere Optionen wie data-columns=&quot;2&quot; oder
+                      data-show-rating=&quot;false&quot; hinzufügen.
                     </p>
                   </div>
 
