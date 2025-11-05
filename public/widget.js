@@ -1,31 +1,31 @@
 // /public/widget.js
-// 🔒 Kundenmagnet Widget v1.0.2 - Shadow DOM mit Debug-Modus
-// Verbesserte Fehlerbehandlung und Logging
+// 🔒 Kundenmagnet Widget v2.0.0 - Mit automatischem iFrame-Fallback
+// Robuste Version für alle Plattformen (WordPress, Shopify, Wix, etc.)
 
 (function () {
   'use strict'
 
-  const WIDGET_VERSION = '1.0.2'
+  const WIDGET_VERSION = '2.0.0'
   const API_BASE_URL = 'https://kundenmagnet-app.de/api/widget'
   const IFRAME_BASE_URL = 'https://kundenmagnet-app.de/widget/frame'
   const CACHE_KEY = 'km_widget_cache'
   const CACHE_TTL = 5 * 60 * 1000 // 5 Minuten
 
-  // Debug Mode: Setze ?km-debug=1 in der URL oder localStorage.setItem('km_debug', '1')
+  // Debug Mode
   const DEBUG_MODE =
     new URLSearchParams(window.location.search).get('km-debug') === '1' ||
     localStorage.getItem('km_debug') === '1'
 
   function debugLog(...args) {
     if (DEBUG_MODE) {
+      // eslint-disable-next-line no-console
       console.log('[Kundenmagnet Widget]', ...args)
     }
   }
 
   function debugError(...args) {
-    if (DEBUG_MODE) {
-      console.error('[Kundenmagnet Widget]', ...args)
-    }
+    // eslint-disable-next-line no-console
+    console.error('[Kundenmagnet Widget ERROR]', ...args)
   }
 
   class KundenmagnetWidget {
@@ -35,7 +35,8 @@
       this.shadowRoot = null
       this.testimonials = []
       this.retryCount = 0
-      this.maxRetries = 3
+      this.maxRetries = 2
+      this.usedFallback = false
       this.init()
     }
 
@@ -48,44 +49,39 @@
         title: this.container.dataset.title || 'Kundenbewertungen',
         showRating: this.container.dataset.showRating !== 'false',
         animation: this.container.dataset.animation !== 'false',
+        fallbackToIframe: this.container.dataset.fallbackToIframe !== 'false', // NEU!
       }
 
-      debugLog('Config parsed:', config)
+      debugLog('Config:', config)
       return config
     }
 
     async init() {
       if (!this.config.campaign) {
-        const errorMsg = 'Keine Kampagne angegeben (data-campaign fehlt)'
-        debugError(errorMsg)
-        this.showError(errorMsg, {
-          solution: 'Fügen Sie das Attribut data-campaign="ihr-slug" hinzu',
-          example: '<div data-kundenmagnet-widget data-campaign="test" data-limit="10"></div>',
+        debugError('Campaign slug missing!')
+        this.showError('Keine Kampagne angegeben (data-campaign fehlt)', {
+          solution: 'Fügen Sie data-campaign="ihr-slug" zum Widget-Container hinzu',
         })
         return
       }
 
-      debugLog('Initializing widget for campaign:', this.config.campaign)
+      debugLog('Initializing for campaign:', this.config.campaign)
 
       // Shadow DOM erstellen
       try {
         this.shadowRoot = this.container.attachShadow({ mode: 'open' })
-        debugLog('Shadow DOM created successfully')
+        debugLog('Shadow DOM created')
       } catch (error) {
-        debugError('Shadow DOM creation failed:', error)
-        this.showError('Browser unterstützt kein Shadow DOM', {
-          solution: 'Verwende iFrame-Fallback',
-        })
+        debugError('Shadow DOM failed:', error)
+        // Fallback zu iFrame wenn Shadow DOM nicht unterstützt
+        this.fallbackToIframe('Browser unterstützt kein Shadow DOM')
         return
       }
 
-      // Styles hinzufügen
       this.addStyles()
-
-      // Loading-State
       this.showLoading()
 
-      // Daten laden
+      // Daten laden mit Fehlerbehandlung
       await this.loadTestimonials()
     }
 
@@ -132,7 +128,6 @@
 .widget-title {
   font-size: 18px;
   font-weight: 600;
-  color: var(--km-text);
 }
 
 .testimonial-list {
@@ -163,12 +158,10 @@
 
 .author-name {
   font-weight: 600;
-  color: var(--km-text);
 }
 
 .testimonial-date {
   font-size: 12px;
-  color: var(--km-text);
   opacity: 0.7;
 }
 
@@ -190,7 +183,6 @@
 
 .testimonial-content {
   line-height: 1.6;
-  color: var(--km-text);
 }
 
 .loading {
@@ -225,11 +217,6 @@
   font-size: 16px;
 }
 
-.error p {
-  margin-bottom: 8px;
-  line-height: 1.5;
-}
-
 .error-details {
   background: #fff;
   padding: 12px;
@@ -237,21 +224,6 @@
   margin-top: 12px;
   font-size: 12px;
   font-family: monospace;
-  color: #333;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.error-solution {
-  background: #fef3c7;
-  padding: 12px;
-  border-radius: 4px;
-  margin-top: 12px;
-  border-left: 4px solid #f59e0b;
-}
-
-.error-solution strong {
-  color: #92400e;
 }
 
 .retry-button {
@@ -267,7 +239,7 @@
 }
 
 .retry-button:hover {
-  background: #3d7be5;
+  opacity: 0.9;
 }
 
 .powered-by {
@@ -301,16 +273,6 @@
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
-.debug-info {
-  background: #eff6ff;
-  border: 1px solid #3b82f6;
-  border-radius: 4px;
-  padding: 8px;
-  margin-top: 12px;
-  font-size: 11px;
-  color: #1e40af;
-}
       `
       this.shadowRoot.appendChild(style)
     }
@@ -321,7 +283,6 @@
   <div class="loading">
     <div class="loading-spinner"></div>
     <p style="margin-top: 12px;">Bewertungen werden geladen...</p>
-    ${DEBUG_MODE ? '<p class="debug-info">Debug-Modus aktiv</p>' : ''}
   </div>
 </div>
       `
@@ -332,59 +293,39 @@
       debugError('Showing error:', message, details)
 
       let detailsHtml = ''
-      if (DEBUG_MODE && details.apiResponse) {
+      if (DEBUG_MODE && details.technicalDetails) {
         detailsHtml = `
 <div class="error-details">
-  <strong>API Response:</strong>
-  <pre>${JSON.stringify(details.apiResponse, null, 2)}</pre>
+  ${details.technicalDetails}
 </div>
         `
       }
 
-      let solutionHtml = ''
-      if (details.solution) {
-        solutionHtml = `
-<div class="error-solution">
-  <strong>💡 Lösung:</strong><br>
-  ${this.escapeHtml(details.solution)}
-  ${details.example ? `<br><br><code>${this.escapeHtml(details.example)}</code>` : ''}
-</div>
-        `
-      }
-
-      const canRetry = this.retryCount < this.maxRetries
-      const retryButton = canRetry
-        ? `<button class="retry-button" onclick="this.getRootNode().host._widget.retryLoad()">🔄 Erneut versuchen</button>`
-        : ''
+      const fallbackButton =
+        this.config.fallbackToIframe && !this.usedFallback
+          ? `<button class="retry-button" onclick="this.getRootNode().host._widget.fallbackToIframe('Manuelle Aktivierung')">📱 iFrame-Version verwenden</button>`
+          : ''
 
       const html = `
 <div class="widget-container">
   <div class="error">
-    <h3>❌ ${this.escapeHtml(message)}</h3>
+    <h3>⚠️ ${this.escapeHtml(message)}</h3>
     <p><strong>Kampagne:</strong> ${this.escapeHtml(this.config.campaign)}</p>
-    <p><strong>API URL:</strong> ${API_BASE_URL}</p>
-    ${solutionHtml}
+    ${details.solution ? `<p><strong>Lösung:</strong> ${this.escapeHtml(details.solution)}</p>` : ''}
     ${detailsHtml}
-    ${retryButton}
-    ${DEBUG_MODE ? '<p class="debug-info">Öffnen Sie die Browser-Konsole (F12) für mehr Details</p>' : ''}
+    ${fallbackButton}
   </div>
 </div>
       `
       this.shadowRoot.innerHTML = this.shadowRoot.querySelector('style').outerHTML + html
 
-      // Store widget reference for retry
+      // Store widget reference
       this.shadowRoot.host._widget = this
-    }
-
-    async retryLoad() {
-      this.retryCount++
-      debugLog(`Retry attempt ${this.retryCount}/${this.maxRetries}`)
-      this.showLoading()
-      await this.loadTestimonials()
     }
 
     async loadTestimonials() {
       const startTime = Date.now()
+      debugLog('Loading testimonials...')
 
       try {
         // Cache prüfen
@@ -396,7 +337,7 @@
           return
         }
 
-        // API-Call
+        // API-Call mit verbessertem Error-Handling
         const params = new URLSearchParams({
           campaign: this.config.campaign,
           limit: this.config.limit.toString(),
@@ -404,76 +345,132 @@
         })
 
         const apiUrl = `${API_BASE_URL}?${params}`
-        debugLog('Fetching from API:', apiUrl)
+        debugLog('Fetching from:', apiUrl)
+
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
 
         const response = await fetch(apiUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            Accept: 'application/json',
           },
+          mode: 'cors',
+          credentials: 'omit',
+          signal: controller.signal,
         })
 
+        clearTimeout(timeoutId)
+
         const loadTime = Date.now() - startTime
-        debugLog(`API Response received in ${loadTime}ms, status: ${response.status}`)
+        debugLog(`API responded in ${loadTime}ms, status: ${response.status}`)
 
         if (!response.ok) {
           let errorData
           try {
             errorData = await response.json()
           } catch {
-            errorData = { error: 'Unbekannter Fehler' }
+            errorData = { error: `HTTP ${response.status}` }
           }
 
           debugError('API Error:', response.status, errorData)
 
-          // Spezifische Fehlermeldungen
-          let errorMessage = errorData.error || 'Fehler beim Laden der Bewertungen'
-          let solution = ''
-
-          if (response.status === 404) {
-            solution =
-              'Prüfen Sie: 1) Kampagnen-Slug korrekt? 2) Kampagne aktiv? 3) Kampagne existiert in der Datenbank?'
-          } else if (response.status === 400) {
-            solution = 'Der Kampagnen-Parameter fehlt oder ist ungültig'
-          } else if (response.status === 500) {
-            solution = 'Serverseitiges Problem. Bitte später nochmal versuchen.'
+          // Bei 404 oder 500 → Fallback zu iFrame
+          if (response.status === 404 || response.status === 500) {
+            this.fallbackToIframe(`API Error: ${errorData.error || response.status}`)
+            return
           }
 
-          throw new Error(errorMessage, {
-            cause: {
-              status: response.status,
-              solution,
-              apiResponse: errorData,
-            },
-          })
+          throw new Error(errorData.error || 'API-Fehler')
         }
 
         const data = await response.json()
-        debugLog('API Response:', data)
+        debugLog('Received data:', data)
 
-        if (!data.testimonials || data.testimonials.length === 0) {
-          debugLog('No testimonials found')
-          this.testimonials = []
-        } else {
-          this.testimonials = data.testimonials
-          debugLog(`Loaded ${this.testimonials.length} testimonials`)
-
-          // In Cache speichern
-          this.setCache(this.testimonials)
+        if (!data.testimonials) {
+          debugError('No testimonials in response')
+          this.fallbackToIframe('Keine Testimonials in API-Response')
+          return
         }
 
-        // Rendern
+        this.testimonials = data.testimonials
+        this.setCache(this.testimonials)
         this.render()
       } catch (error) {
         debugError('loadTestimonials error:', error)
 
-        const details = {
-          solution: error.cause?.solution || 'Bitte Support kontaktieren',
-          apiResponse: error.cause?.apiResponse,
+        // Bei Netzwerk-Fehler → Fallback zu iFrame
+        if (error.name === 'TypeError' || error.name === 'AbortError') {
+          debugError('Network error detected, falling back to iFrame')
+          this.fallbackToIframe(`Netzwerk-Problem: ${error.message}. Versuche iFrame-Fallback...`)
+          return
         }
 
-        this.showError(error.message || 'Bewertungen konnten nicht geladen werden', details)
+        // Retry bei anderen Fehlern
+        if (this.retryCount < this.maxRetries) {
+          this.retryCount++
+          debugLog(`Retry ${this.retryCount}/${this.maxRetries}`)
+          setTimeout(() => this.loadTestimonials(), 1000 * this.retryCount)
+          return
+        }
+
+        // Nach allen Retries → Fallback
+        this.fallbackToIframe(`Fehler nach ${this.maxRetries} Versuchen: ${error.message}`)
       }
+    }
+
+    fallbackToIframe(reason) {
+      if (this.usedFallback) return // Verhindere doppelten Fallback
+      this.usedFallback = true
+
+      debugLog('Falling back to iFrame, reason:', reason)
+
+      // Entferne Shadow DOM
+      if (this.shadowRoot) {
+        this.shadowRoot.innerHTML = ''
+      }
+
+      // Erstelle iFrame
+      const params = new URLSearchParams({
+        campaign: this.config.campaign,
+        limit: this.config.limit.toString(),
+        sort: this.config.sort,
+        theme: this.config.theme,
+      })
+
+      const iframe = document.createElement('iframe')
+      iframe.src = `${IFRAME_BASE_URL}?${params}`
+      iframe.style.cssText = 'width: 100%; border: none; min-height: 400px; display: block;'
+      iframe.title = this.config.title || 'Kundenbewertungen'
+      iframe.setAttribute('data-kundenmagnet-iframe', this.config.campaign)
+
+      // Auto-Resize
+      const resizeListener = (event) => {
+        const allowedOrigins = [
+          'https://kundenmagnet-app.de',
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+        ]
+
+        if (!allowedOrigins.includes(event.origin)) return
+
+        if (event.data && event.data.type === 'kundenmagnet-resize') {
+          const targetIframe = document.querySelector(
+            `iframe[data-kundenmagnet-iframe="${this.config.campaign}"]`,
+          )
+          if (targetIframe) {
+            targetIframe.style.height = event.data.height + 'px'
+          }
+        }
+      }
+
+      window.addEventListener('message', resizeListener)
+
+      this.container.innerHTML = ''
+      this.container.appendChild(iframe)
+
+      debugLog('iFrame fallback activated')
     }
 
     getCache() {
@@ -485,14 +482,11 @@
         const { data, timestamp } = JSON.parse(cached)
         if (Date.now() - timestamp > CACHE_TTL) {
           localStorage.removeItem(key)
-          debugLog('Cache expired')
           return null
         }
 
-        debugLog('Cache hit')
         return data
-      } catch (error) {
-        debugError('Cache read error:', error)
+      } catch {
         return null
       }
     }
@@ -507,9 +501,8 @@
             timestamp: Date.now(),
           }),
         )
-        debugLog('Data cached')
-      } catch (error) {
-        debugError('Cache write error:', error)
+      } catch {
+        // Ignore localStorage errors (e.g., quota exceeded, private mode)
       }
     }
 
@@ -521,7 +514,7 @@
     <h3 class="widget-title">${this.escapeHtml(this.config.title)}</h3>
   </div>
   <div class="testimonial-list">
-    <p style="text-align: center; padding: 40px 20px; color: var(--km-text); opacity: 0.7;">
+    <p style="text-align: center; padding: 40px 20px; opacity: 0.7;">
       Noch keine Bewertungen vorhanden
     </p>
   </div>
@@ -531,7 +524,6 @@
 </div>
         `
         this.shadowRoot.innerHTML = this.shadowRoot.querySelector('style').outerHTML + html
-        debugLog('Rendered empty state')
         return
       }
 
@@ -604,84 +596,29 @@
     }
   }
 
-  // iFrame Fallback für Browser ohne Shadow DOM Support
-  function createIframeFallback(container, config) {
-    debugLog('Creating iFrame fallback for:', config.campaign)
-
-    const params = new URLSearchParams({
-      campaign: config.campaign,
-      limit: config.limit.toString(),
-      sort: config.sort,
-      theme: config.theme,
-    })
-
-    const iframe = document.createElement('iframe')
-    iframe.src = `${IFRAME_BASE_URL}?${params}`
-    iframe.style.cssText = 'width: 100%; border: none; min-height: 400px; display: block;'
-    iframe.title = config.title || 'Kundenbewertungen'
-    iframe.setAttribute('data-kundenmagnet-iframe', config.campaign)
-
-    // Auto-Resize per postMessage
-    const resizeListener = (event) => {
-      const allowedOrigins = [
-        'https://kundenmagnet-app.de',
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-      ]
-
-      if (!allowedOrigins.includes(event.origin)) {
-        return
-      }
-
-      if (event.data && event.data.type === 'kundenmagnet-resize') {
-        const targetIframe = document.querySelector(
-          `iframe[data-kundenmagnet-iframe="${config.campaign}"]`,
-        )
-        if (targetIframe) {
-          targetIframe.style.height = event.data.height + 'px'
-          debugLog('iFrame resized to:', event.data.height)
-        }
-      }
-    }
-
-    window.addEventListener('message', resizeListener)
-
-    container.innerHTML = ''
-    container.appendChild(iframe)
-
-    debugLog('iFrame Fallback created')
-  }
-
-  // Auto-Init für alle Container
+  // Auto-Init
   function initWidgets() {
     debugLog('Initializing widgets, version:', WIDGET_VERSION)
 
     const containers = document.querySelectorAll('[data-kundenmagnet-widget]')
-    debugLog(`Found ${containers.length} widget container(s)`)
+    debugLog(`Found ${containers.length} container(s)`)
 
     containers.forEach((container, index) => {
-      // Skip wenn bereits initialisiert
       if (container.shadowRoot || container.querySelector('iframe[data-kundenmagnet-iframe]')) {
-        debugLog(`Container ${index} already initialized, skipping`)
+        debugLog(`Container ${index} already initialized`)
         return
       }
 
       const config = {
         campaign: container.dataset.campaign || '',
-        limit: parseInt(container.dataset.limit || '10', 10),
-        sort: container.dataset.sort || 'newest',
-        theme: container.dataset.theme || 'light',
-        title: container.dataset.title || 'Kundenbewertungen',
-        showRating: container.dataset.showRating !== 'false',
-        animation: container.dataset.animation !== 'false',
       }
 
       if (!config.campaign) {
         debugError('Missing data-campaign on container:', container)
         container.innerHTML = `
 <div style="color: red; padding: 1rem; border: 2px solid red; border-radius: 4px;">
-  <strong>Widget-Fehler:</strong> Kampagnen-Slug fehlt<br>
-  <small>Fügen Sie data-campaign="ihr-slug" hinzu</small>
+  <strong>Widget-Fehler:</strong> data-campaign fehlt<br>
+  <small>Beispiel: &lt;div data-kundenmagnet-widget data-campaign="test"&gt;&lt;/div&gt;</small>
 </div>
         `
         return
@@ -689,60 +626,25 @@
 
       debugLog(`Initializing widget ${index} for campaign:`, config.campaign)
 
-      // Prüfe Shadow DOM Support
-      if (typeof container.attachShadow === 'function') {
-        try {
-          new KundenmagnetWidget(container)
-          debugLog('Widget initialized with Shadow DOM')
-        } catch (error) {
-          debugError('Shadow DOM initialization failed:', error)
-          createIframeFallback(container, config)
-        }
-      } else {
-        debugLog('Browser does not support Shadow DOM, using iFrame fallback')
-        createIframeFallback(container, config)
+      try {
+        new KundenmagnetWidget(container)
+      } catch (error) {
+        debugError('Widget initialization failed:', error)
+        // iFrame wird automatisch als Fallback verwendet
       }
     })
   }
 
-  // Init nach DOMContentLoaded oder sofort wenn DOM ready
+  // Init
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initWidgets)
   } else {
     initWidgets()
   }
 
-  // Global verfügbar machen
+  // Global
   window.KundenmagnetWidget = KundenmagnetWidget
   window.initKundenmagnetWidgets = initWidgets
 
-  // Debug-Hilfe
-  if (DEBUG_MODE) {
-    window.KundenmagnetDebug = {
-      version: WIDGET_VERSION,
-      testAPI: async (campaign) => {
-        const url = `${API_BASE_URL}?campaign=${campaign}`
-        console.log('Testing API:', url)
-        const response = await fetch(url)
-        const data = await response.json()
-        console.log('Response:', data)
-        return data
-      },
-      clearCache: () => {
-        Object.keys(localStorage)
-          .filter((key) => key.startsWith(CACHE_KEY))
-          .forEach((key) => localStorage.removeItem(key))
-        console.log('Cache cleared')
-      },
-    }
-
-    console.log(
-      `%c[Kundenmagnet Widget v${WIDGET_VERSION}]%c Debug-Modus aktiv`,
-      'background: #4f8ef7; color: white; padding: 4px 8px; border-radius: 4px;',
-      'color: #4f8ef7; font-weight: bold;',
-    )
-    console.log('Debug-Funktionen:', window.KundenmagnetDebug)
-  } else {
-    debugLog(`Loaded successfully, version: ${WIDGET_VERSION}`)
-  }
+  debugLog(`Widget v${WIDGET_VERSION} loaded successfully`)
 })()
