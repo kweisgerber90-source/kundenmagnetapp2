@@ -71,14 +71,51 @@ export function CampaignList({ campaigns }: CampaignListProps) {
                   {getStatusBadge(campaign.status)}
                 </div>
 
+                {/* Slug prominent anzeigen */}
+                <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-blue-900">Widget-Slug:</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <code className="rounded bg-white px-3 py-1.5 font-mono text-sm font-semibold text-blue-600">
+                          {slug}
+                        </code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(slug)
+                            setCopiedId(campaign.id)
+                            setTimeout(() => setCopiedId(null), 2000)
+                          }}
+                          className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                          title="Slug kopieren"
+                        >
+                          {copiedId === campaign.id ? (
+                            <>
+                              <Check className="mr-1 inline h-3 w-3" />
+                              Kopiert!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="mr-1 inline h-3 w-3" />
+                              Kopieren
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Review Link */}
                 <div className="mt-2 flex items-center space-x-2 text-sm text-gray-500">
+                  <span className="text-gray-600">Bewertungslink:</span>
                   <code className="rounded bg-gray-100 px-2 py-1 text-xs">/r/{slug}</code>
                   <button
-                    onClick={() => copyLink(slug, campaign.id)}
+                    onClick={() => copyLink(slug, campaign.id + '-link')}
                     className="rounded p-1 hover:bg-gray-100"
                     title="Link kopieren"
                   >
-                    {copiedId === campaign.id ? (
+                    {copiedId === campaign.id + '-link' ? (
                       <Check className="h-4 w-4 text-green-600" />
                     ) : (
                       <Copy className="h-4 w-4" />
