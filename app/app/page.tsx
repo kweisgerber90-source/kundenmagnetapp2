@@ -30,11 +30,22 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
 
-  // Testimonials zählen
-  const { count: testimonialsCount } = await supabase
-    .from('testimonials')
-    .select('*', { count: 'exact', head: true })
+  // Testimonials zählen (über campaign_id JOIN)
+  // Testimonials haben keinen direkten user_id, sondern sind über campaign_id verknüpft
+  const { data: userCampaigns } = await supabase
+    .from('campaigns')
+    .select('id')
     .eq('user_id', user.id)
+
+  const campaignIds = userCampaigns?.map((c) => c.id) || []
+
+  const { count: testimonialsCount } =
+    campaignIds.length > 0
+      ? await supabase
+          .from('testimonials')
+          .select('*', { count: 'exact', head: true })
+          .in('campaign_id', campaignIds)
+      : { count: 0 }
 
   // QR-Codes zählen
   const { count: qrCodesCount } = await supabase
