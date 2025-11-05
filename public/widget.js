@@ -502,7 +502,7 @@
           }),
         )
       } catch {
-        // Ignore localStorage errors (e.g., quota exceeded, private mode)
+        // Ignore localStorage errors (quota exceeded, privacy mode, etc.)
       }
     }
 
