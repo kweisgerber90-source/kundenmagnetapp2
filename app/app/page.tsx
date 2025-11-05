@@ -1,11 +1,9 @@
 // /app/app/page.tsx
-// ----------------------------------------------------------------------------
-// Dashboard — Typed Routes Fix
-// ----------------------------------------------------------------------------
+// Dashboard mit echten Statistiken aus Supabase
 
-import { getUser } from '@/lib/supabase/server'
+import { createClient, getUser } from '@/lib/supabase/server'
 import { Code2, MessageSquare, QrCode, TrendingUp, type LucideIcon } from 'lucide-react'
-import type { Route } from 'next' // 🔧
+import type { Route } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -14,7 +12,7 @@ type IconType = LucideIcon
 interface QuickAction {
   title: string
   description: string
-  href: Route // 🔧
+  href: Route
   icon: IconType
   color: string
 }
@@ -23,25 +21,46 @@ export default async function DashboardPage() {
   const user = await getUser()
   if (!user) redirect('/login')
 
+  // Statistiken aus Supabase laden
+  const supabase = await createClient()
+
+  // Kampagnen zählen
+  const { count: campaignsCount } = await supabase
+    .from('campaigns')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  // Testimonials zählen
+  const { count: testimonialsCount } = await supabase
+    .from('testimonials')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  // QR-Codes zählen
+  const { count: qrCodesCount } = await supabase
+    .from('qr_codes')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
   const quickActions: QuickAction[] = [
     {
       title: 'Neue Kampagne',
       description: 'Erstelle eine neue Bewertungskampagne',
-      href: '/app/kampagnen' as Route, // 🔧
+      href: '/app/kampagnen' as Route,
       icon: MessageSquare as IconType,
       color: 'bg-blue-500',
     },
     {
       title: 'QR-Code erstellen',
       description: 'Generiere einen QR-Code für Offline-Bewertungen',
-      href: '/app/qr' as Route, // 🔧
+      href: '/app/qr' as Route,
       icon: QrCode as IconType,
       color: 'bg-purple-500',
     },
     {
       title: 'Widget einbetten',
       description: 'Bette Testimonials auf deiner Website ein',
-      href: '/app/widget' as Route, // 🔧
+      href: '/app/widget' as Route,
       icon: Code2 as IconType,
       color: 'bg-green-500',
     },
@@ -61,7 +80,7 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Kampagnen</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
+              <p className="mt-2 text-3xl font-bold text-gray-900">{campaignsCount ?? 0}</p>
             </div>
             <div className="rounded-full bg-blue-100 p-3">
               <MessageSquare className="h-6 w-6 text-blue-600" />
@@ -73,7 +92,7 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Testimonials</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
+              <p className="mt-2 text-3xl font-bold text-gray-900">{testimonialsCount ?? 0}</p>
             </div>
             <div className="rounded-full bg-green-100 p-3">
               <TrendingUp className="h-6 w-6 text-green-600" />
@@ -85,7 +104,7 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">QR-Codes</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
+              <p className="mt-2 text-3xl font-bold text-gray-900">{qrCodesCount ?? 0}</p>
             </div>
             <div className="rounded-full bg-purple-100 p-3">
               <QrCode className="h-6 w-6 text-purple-600" />
@@ -131,7 +150,7 @@ export default async function DashboardPage() {
           <li>4. Bette das Widget auf deiner Website ein</li>
         </ol>
         <Link
-          href={'/docs' as Route} // 🔧 falls Typed Routes streng ist
+          href={'/docs' as Route}
           className="mt-4 inline-block text-sm font-medium text-blue-700 hover:text-blue-800"
         >
           Dokumentation ansehen →
