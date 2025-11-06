@@ -1,11 +1,11 @@
 // /public/widget.js
-// 🔒 Kundenmagnet Widget v2.0.0 - Mit automatischem iFrame-Fallback
+// 🔒 Kundenmagnet Widget v2.1.0 - Mit Colorful Theme + Horizontal Scroll
 // Robuste Version für alle Plattformen (WordPress, Shopify, Wix, etc.)
 
 (function () {
   'use strict'
 
-  const WIDGET_VERSION = '2.0.0'
+  const WIDGET_VERSION = '2.1.0'
   const API_BASE_URL = 'https://kundenmagnet-app.de/api/widget'
   const IFRAME_BASE_URL = 'https://kundenmagnet-app.de/widget/frame'
   const CACHE_KEY = 'km_widget_cache'
@@ -49,7 +49,7 @@
         title: this.container.dataset.title || 'Kundenbewertungen',
         showRating: this.container.dataset.showRating !== 'false',
         animation: this.container.dataset.animation !== 'false',
-        fallbackToIframe: this.container.dataset.fallbackToIframe !== 'false', // NEU!
+        fallbackToIframe: this.container.dataset.fallbackToIframe !== 'false',
       }
 
       debugLog('Config:', config)
@@ -86,22 +86,54 @@
     }
 
     addStyles() {
+      // Theme-Definitionen
+      const themes = {
+        light: {
+          primary: '#4f8ef7',
+          bg: '#ffffff',
+          text: '#1a1a1a',
+          border: '#e5e5e5',
+          star: '#fbbf24',
+          shadow: 'rgba(0, 0, 0, 0.1)',
+        },
+        dark: {
+          primary: '#4f8ef7',
+          bg: '#1f2937',
+          text: '#f9fafb',
+          border: '#374151',
+          star: '#fbbf24',
+          shadow: 'rgba(0, 0, 0, 0.3)',
+        },
+        minimal: {
+          primary: '#000000',
+          bg: '#ffffff',
+          text: '#000000',
+          border: '#d1d5db',
+          star: '#000000',
+          shadow: 'rgba(0, 0, 0, 0.05)',
+        },
+        colorful: {
+          primary: '#ec4899',
+          bg: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%)',
+          text: '#1f2937',
+          border: '#fbbf24',
+          star: '#ef4444',
+          shadow: 'rgba(236, 72, 153, 0.2)',
+        },
+      }
+
+      const theme = themes[this.config.theme] || themes.light
+      const isColorful = this.config.theme === 'colorful'
+
       const style = document.createElement('style')
       style.textContent = `
 :host {
-  --km-primary: #4f8ef7;
-  --km-bg: #ffffff;
-  --km-text: #1a1a1a;
-  --km-border: #e5e5e5;
-  --km-star: #fbbf24;
-  --km-shadow: rgba(0, 0, 0, 0.1);
-}
-
-:host([data-theme="dark"]) {
-  --km-bg: #1f2937;
-  --km-text: #f9fafb;
-  --km-border: #374151;
-  --km-shadow: rgba(0, 0, 0, 0.3);
+  --km-primary: ${theme.primary};
+  --km-bg: ${theme.bg};
+  --km-text: ${theme.text};
+  --km-border: ${theme.border};
+  --km-star: ${theme.star};
+  --km-shadow: ${theme.shadow};
 }
 
 * {
@@ -112,11 +144,11 @@
 
 .widget-container {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--km-bg);
+  ${isColorful ? 'background: var(--km-bg);' : 'background: var(--km-bg);'}
   color: var(--km-text);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 8px var(--km-shadow);
+  ${isColorful ? 'box-shadow: 0 8px 30px var(--km-shadow);' : 'box-shadow: 0 2px 8px var(--km-shadow);'}
 }
 
 .widget-header {
@@ -128,20 +160,50 @@
 .widget-title {
   font-size: 18px;
   font-weight: 600;
+  ${isColorful ? 'background: linear-gradient(135deg, #ec4899, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;' : ''}
 }
 
+/* ===== HORIZONTAL SCROLL (NEU) ===== */
 .testimonial-list {
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* Horizontal statt column */
   gap: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch; /* iOS smooth scroll */
+}
+
+/* Custom Scrollbar */
+.testimonial-list::-webkit-scrollbar {
+  height: 8px;
+}
+
+.testimonial-list::-webkit-scrollbar-track {
+  background: var(--km-border);
+  border-radius: 4px;
+}
+
+.testimonial-list::-webkit-scrollbar-thumb {
+  background: var(--km-primary);
+  border-radius: 4px;
+}
+
+.testimonial-list::-webkit-scrollbar-thumb:hover {
+  opacity: 0.8;
 }
 
 .testimonial-card {
-  background: var(--km-bg);
+  ${isColorful ? 'background: rgba(255, 255, 255, 0.95);' : 'background: var(--km-bg);'}
   border: 1px solid var(--km-border);
   border-radius: 6px;
   padding: 16px;
+  min-width: 280px; /* Feste Mindestbreite für Carousel */
+  max-width: 320px; /* Maximale Breite */
+  flex-shrink: 0; /* Verhindert Schrumpfen */
   transition: transform 0.2s, box-shadow 0.2s;
+  ${isColorful ? 'box-shadow: 0 4px 12px var(--km-shadow);' : ''}
 }
 
 .testimonial-card:hover {
@@ -158,6 +220,7 @@
 
 .author-name {
   font-weight: 600;
+  ${isColorful ? 'color: #ec4899;' : ''}
 }
 
 .testimonial-date {
@@ -262,6 +325,7 @@
   }
   .testimonial-card {
     padding: 12px;
+    min-width: 240px; /* Kleiner auf Mobile */
   }
 }
 
