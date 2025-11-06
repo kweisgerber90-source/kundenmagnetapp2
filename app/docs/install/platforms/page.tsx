@@ -1,9 +1,10 @@
 // app/docs/install/platforms/page.tsx
+// Aktualisiert für Widget v2.0 mit iFrame-Fokus und automatischem Fallback
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { BRAND } from '@/lib/constants'
-import { AlertCircle, Code, Copy, ExternalLink, Globe, Layers, Plug } from 'lucide-react'
+import { AlertCircle, Code, Copy, Globe, Plug } from 'lucide-react'
 import Link from 'next/link'
 
 export const metadata = {
@@ -13,8 +14,6 @@ export const metadata = {
 }
 
 export default function PlatformInstallDocsPage() {
-  const widgetScriptUrl = `https://${BRAND.domain}/widget.js`
-
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="mx-auto max-w-5xl">
@@ -31,6 +30,20 @@ export default function PlatformInstallDocsPage() {
             Detaillierte Anleitungen für Ihre Website-Plattform – vom Anfänger bis zum Entwickler
           </p>
         </div>
+
+        {/* Wichtiger Hinweis zum Kampagnen-Slug */}
+        <Alert className="mb-8 border-blue-200 bg-blue-50">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-900">
+            <strong>Wichtig:</strong> In allen Code-Beispielen müssen Sie{' '}
+            <code className="font-bold">ihr-slug</code> oder{' '}
+            <code className="font-bold">IHRE-KAMPAGNEN-ID</code> durch Ihren eigenen Kampagnen-Slug
+            ersetzen.
+            <br />
+            <strong>Wo finden Sie Ihren Slug?</strong> Dashboard → Kampagnen → Blaue Box
+            &quot;Widget-Slug&quot; → Kopieren
+          </AlertDescription>
+        </Alert>
 
         {/* Quick Navigation */}
         <Card className="mb-8">
@@ -53,6 +66,12 @@ export default function PlatformInstallDocsPage() {
                 { name: 'Carrd', href: '#carrd', icon: '📄' },
                 { name: 'Statisch / HTML', href: '#static', icon: '💻' },
                 { name: 'React/Next.js', href: '#react', icon: '⚛️' },
+                { name: 'Vue/Nuxt', href: '#vue', icon: '💚' },
+                { name: 'Angular', href: '#angular', icon: '🅰️' },
+                { name: 'Svelte/SvelteKit', href: '#svelte', icon: '🔥' },
+                { name: 'Google Tag Manager', href: '#gtm', icon: '📊' },
+                { name: 'Content Security Policy', href: '#csp', icon: '🔒' },
+                { name: 'Caching & CDN', href: '#caching', icon: '⚡' },
               ].map((platform) => (
                 <a
                   key={platform.name}
@@ -78,43 +97,28 @@ export default function PlatformInstallDocsPage() {
             {/* WordPress */}
             <Card id="wordpress" className="scroll-mt-20">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2 text-2xl">
-                      <span>📝</span> WordPress
-                    </CardTitle>
-                    <CardDescription>
-                      Perfekt für Blogs, Unternehmenswebsites und Online-Shops mit WooCommerce
-                    </CardDescription>
-                  </div>
-                  <div className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400">
-                    Empfohlen
-                  </div>
-                </div>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <span>📝</span> WordPress
+                </CardTitle>
+                <CardDescription>
+                  Die weltweit beliebteste CMS-Plattform (Gutenberg, Elementor, Classic Editor)
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Empfohlen für WordPress:</strong> Verwenden Sie die iFrame-Variante für
+                    maximale Kompatibilität mit Security-Plugins (Wordfence, iThemes Security) und
+                    Cache-Systemen (WP Rocket, W3 Total Cache).
+                  </AlertDescription>
+                </Alert>
+
                 <Tabs defaultValue="manual" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="plugin">Plugin (in Planung)</TabsTrigger>
-                    <TabsTrigger value="manual">Manueller Code</TabsTrigger>
+                    <TabsTrigger value="manual">Manuelle Installation (Empfohlen)</TabsTrigger>
+                    <TabsTrigger value="shortcode">Shortcode (für Entwickler)</TabsTrigger>
                   </TabsList>
-
-                  <TabsContent value="plugin" className="space-y-4">
-                    <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950/20">
-                      <div className="flex gap-2">
-                        <Plug className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
-                        <div>
-                          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                            Bald verfügbar: Offizielles Plugin
-                          </p>
-                          <p className="mt-1 text-xs text-blue-800 dark:text-blue-200">
-                            Wir arbeiten an einem offiziellen WordPress-Plugin. Nutzen Sie vorerst
-                            die manuelle Installation.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
 
                   <TabsContent value="manual" className="space-y-6">
                     <div className="space-y-4">
@@ -123,10 +127,19 @@ export default function PlatformInstallDocsPage() {
                           1
                         </div>
                         <div className="flex-1">
-                          <h4 className="mb-2 font-medium">Widget-ID aus Dashboard kopieren</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Gehen Sie in Ihr {BRAND.name} Dashboard → Widget → Kampagnen-ID kopieren
-                          </p>
+                          <h4 className="mb-2 font-medium">
+                            Kampagnen-Slug aus Dashboard kopieren
+                          </h4>
+                          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                            <p className="text-sm text-blue-900">
+                              <strong>
+                                Dashboard → Kampagnen → Blaue Box &quot;Widget-Slug&quot;
+                              </strong>
+                              <br />
+                              Beispiel: Wenn Ihr Slug <code>mein-shop</code> ist, verwenden Sie
+                              diesen in Schritt 2.
+                            </p>
+                          </div>
                         </div>
                       </div>
 
@@ -135,30 +148,24 @@ export default function PlatformInstallDocsPage() {
                           2
                         </div>
                         <div className="flex-1">
-                          <h4 className="mb-2 font-medium">Im Theme einfügen</h4>
+                          <h4 className="mb-2 font-medium">
+                            Gutenberg Block Editor: HTML-Block hinzufügen
+                          </h4>
                           <p className="mb-3 text-sm text-muted-foreground">
-                            <strong>Option A: Gutenberg Block Editor</strong>
+                            Öffnen Sie die Seite/Beitrag → Klicken Sie <strong>+</strong> → Suchen
+                            Sie <strong>&quot;Benutzerdefiniertes HTML&quot;</strong>
                           </p>
-                          <ul className="mb-4 space-y-1 text-sm text-muted-foreground">
-                            <li>• Öffnen Sie die Seite/den Beitrag im Editor</li>
-                            <li>
-                              • Fügen Sie einen <strong>&quot;Custom HTML&quot;</strong> Block hinzu
-                            </li>
-                            <li>• Fügen Sie den Code unten ein</li>
-                          </ul>
-
                           <div className="relative">
                             <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                              <code>{`<!-- Widget-Script laden -->
-<script src="${widgetScriptUrl}" defer></script>
+                              <code>{`<!-- Kundenmagnet Widget (iFrame-Variante) -->
+<iframe
+  src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=10"
+  style="width: 100%; border: none; min-height: 400px;"
+  title="Kundenbewertungen"
+></iframe>
 
-<!-- Widget-Container -->
-<div 
-  data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID"
-  data-theme="light"
-  data-limit="6"
-  data-layout="grid"
-></div>`}</code>
+<!-- WICHTIG: Ersetzen Sie "ihr-slug" mit Ihrem Kampagnen-Slug aus Schritt 1! -->
+<!-- Beispiel: campaign=mein-shop -->`}</code>
                             </pre>
                             <Button size="sm" variant="ghost" className="absolute right-2 top-2">
                               <Copy className="h-3 w-3" />
@@ -174,23 +181,106 @@ export default function PlatformInstallDocsPage() {
                         <div className="flex-1">
                           <h4 className="mb-2 font-medium">Häufige Probleme beheben</h4>
                           <div className="space-y-3 text-sm">
-                            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900 dark:bg-yellow-950/20">
-                              <p className="font-medium text-yellow-900 dark:text-yellow-100">
+                            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                              <p className="font-medium text-yellow-900">
                                 ⚠️ Widget wird nicht angezeigt
                               </p>
-                              <ul className="mt-2 space-y-1 text-xs text-yellow-800 dark:text-yellow-200">
+                              <ul className="mt-2 space-y-1 text-xs text-yellow-800">
+                                <li>
+                                  • <strong>Slug falsch?</strong> Prüfen Sie, dass Sie{' '}
+                                  <code>ihr-slug</code> ersetzt haben
+                                </li>
                                 <li>
                                   • <strong>Caching-Plugins</strong> (z.B. WP Rocket): Cache leeren
                                 </li>
                                 <li>
-                                  • <strong>Minify-Plugins</strong>: Script von Minification
-                                  ausschließen
+                                  • <strong>Security-Plugins</strong> (z.B. Wordfence): Domain{' '}
+                                  <code>kundenmagnet-app.de</code> zur Whitelist hinzufügen
                                 </li>
-                                <li>• Browser-Konsole prüfen (F12) auf Fehler</li>
+                                <li>
+                                  • <strong>Browser-Cache:</strong> Strg+Shift+R (Windows) /
+                                  Cmd+Shift+R (Mac)
+                                </li>
                               </ul>
                             </div>
                           </div>
                         </div>
+                      </div>
+
+                      <Alert className="border-green-200 bg-green-50">
+                        <AlertCircle className="h-4 w-4 text-green-600" />
+                        <AlertDescription className="text-green-900">
+                          <strong>Warum iFrame für WordPress?</strong>
+                          <ul className="mt-2 space-y-1 text-sm">
+                            <li>✓ Funktioniert mit allen Security-Plugins</li>
+                            <li>✓ Keine CORS/CSP-Probleme</li>
+                            <li>✓ Kein Cookie-Banner erforderlich</li>
+                            <li>✓ 100% garantierte Funktionalität</li>
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="shortcode" className="space-y-4">
+                    <Alert className="border-yellow-200 bg-yellow-50">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-yellow-900">
+                        <strong>Für Entwickler:</strong> Diese Methode erfordert Zugriff auf die{' '}
+                        <code>functions.php</code> Ihres Child-Themes.
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Fügen Sie diesen Code in die <code>functions.php</code> Ihres Child-Themes
+                        ein:
+                      </p>
+
+                      <div className="relative">
+                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                          <code>{`// Kundenmagnet Widget Shortcode
+function kundenmagnet_widget_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'campaign' => 'default', // Ersetzen Sie 'default' mit Ihrem Standard-Slug
+        'limit' => '10',
+        'theme' => 'light'
+    ), $atts);
+    
+    return sprintf(
+        '<iframe src="https://kundenmagnet-app.de/widget/frame?campaign=%s&limit=%s&theme=%s" 
+                 style="width: 100%%; border: none; min-height: 400px;" 
+                 title="Kundenbewertungen"></iframe>',
+        esc_attr($atts['campaign']),
+        esc_attr($atts['limit']),
+        esc_attr($atts['theme'])
+    );
+}
+add_shortcode('kundenmagnet', 'kundenmagnet_widget_shortcode');
+
+/* Verwendung im Editor:
+   [kundenmagnet campaign="ihr-slug" limit="5"]
+   
+   WICHTIG: Ersetzen Sie "ihr-slug" mit Ihrem Kampagnen-Slug!
+   Wo finden? Dashboard → Kampagnen → Widget-Slug kopieren
+*/`}</code>
+                        </pre>
+                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <h4 className="mb-2 text-sm font-medium text-blue-900">
+                          Verwendung im Editor:
+                        </h4>
+                        <code className="text-sm text-blue-800">
+                          [kundenmagnet campaign=&quot;mein-shop&quot; limit=&quot;5&quot;]
+                        </code>
+                        <p className="mt-2 text-xs text-blue-700">
+                          Ersetzen Sie <strong>mein-shop</strong> mit Ihrem tatsächlichen
+                          Kampagnen-Slug aus dem Dashboard!
+                        </p>
                       </div>
                     </div>
                   </TabsContent>
@@ -205,19 +295,27 @@ export default function PlatformInstallDocsPage() {
                   <span>🛍️</span> Shopify
                 </CardTitle>
                 <CardDescription>
-                  Ideal für E-Commerce: Zeigen Sie Bewertungen auf Produktseiten
+                  E-Commerce-Plattform mit Theme-Integration und Custom Sections
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> In allen Shopify-Code-Beispielen müssen Sie{' '}
+                    <code>ihr-slug</code> durch Ihren Kampagnen-Slug aus dem Dashboard ersetzen!
+                  </AlertDescription>
+                </Alert>
+
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                       1
                     </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Theme-Editor öffnen</h4>
+                    <div>
+                      <h4 className="font-medium">Kampagnen-Slug kopieren</h4>
                       <p className="text-sm text-muted-foreground">
-                        Shopify Admin → <strong>Onlineshop → Themes → Code bearbeiten</strong>
+                        Dashboard → Kampagnen → Blaue Box &quot;Widget-Slug&quot; → Kopieren
                       </p>
                     </div>
                   </div>
@@ -226,20 +324,11 @@ export default function PlatformInstallDocsPage() {
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                       2
                     </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Script in theme.liquid einfügen</h4>
-                      <p className="mb-3 text-sm text-muted-foreground">
-                        Öffnen Sie <code>Layout → theme.liquid</code> und fügen Sie vor{' '}
-                        <code>&lt;/head&gt;</code> ein:
+                    <div>
+                      <h4 className="font-medium">Theme-Editor öffnen</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Online Store → Themes → Customize</strong>
                       </p>
-                      <div className="relative">
-                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`<script src="${widgetScriptUrl}" defer></script>`}</code>
-                        </pre>
-                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
                     </div>
                   </div>
 
@@ -248,18 +337,39 @@ export default function PlatformInstallDocsPage() {
                       3
                     </div>
                     <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Widget auf Produktseiten platzieren</h4>
+                      <h4 className="mb-2 font-medium">Custom Liquid Section hinzufügen</h4>
                       <p className="mb-3 text-sm text-muted-foreground">
-                        Öffnen Sie <code>Sections → product-template.liquid</code> und fügen Sie
-                        nach der Produktbeschreibung ein:
+                        Klicken Sie <strong>&quot;Add section&quot;</strong> →{' '}
+                        <strong>&quot;Custom Liquid&quot;</strong>
                       </p>
                       <div className="relative">
                         <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`<div 
-  data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID"
-  data-theme="light"
-  data-limit="3"
-></div>`}</code>
+                          <code>{`<!-- Shopify Custom Liquid Section -->
+<div class="kundenmagnet-section page-width">
+  <h2>{{ section.settings.heading }}</h2>
+  
+  <!-- Widget iFrame -->
+  <iframe
+    src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=10&theme=light"
+    style="width: 100%; border: none; min-height: 500px;"
+    title="Kundenbewertungen"
+    loading="lazy"
+  ></iframe>
+</div>
+
+<style>
+.kundenmagnet-section {
+  margin: 60px auto;
+  padding: 0 20px;
+}
+.kundenmagnet-section h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+</style>
+
+<!-- WICHTIG: Ersetzen Sie "ihr-slug" mit Ihrem Kampagnen-Slug! -->
+<!-- Wo finden? Dashboard → Kampagnen → Widget-Slug kopieren -->`}</code>
                         </pre>
                         <Button size="sm" variant="ghost" className="absolute right-2 top-2">
                           <Copy className="h-3 w-3" />
@@ -267,6 +377,18 @@ export default function PlatformInstallDocsPage() {
                       </div>
                     </div>
                   </div>
+
+                  <Alert className="border-orange-200 bg-orange-50">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-orange-900">
+                      <strong>Beispiel:</strong> Wenn Ihr Kampagnen-Slug{' '}
+                      <code>online-shop-2024</code> ist, ändern Sie die Zeile zu:
+                      <br />
+                      <code className="mt-2 block text-xs">
+                        campaign=online-shop-2024&amp;limit=10
+                      </code>
+                    </AlertDescription>
+                  </Alert>
                 </div>
               </CardContent>
             </Card>
@@ -278,66 +400,102 @@ export default function PlatformInstallDocsPage() {
                   <span>🎨</span> Webflow
                 </CardTitle>
                 <CardDescription>
-                  Für Designer und Agenturen – visuell und professionell
+                  Professioneller Website-Builder mit Custom Code Support
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Custom Code öffnen</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Webflow Designer → Seiten-Einstellungen (⚙️) → <strong>Custom Code</strong>
-                      </p>
-                    </div>
-                  </div>
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Ersetzen Sie in allen Code-Beispielen{' '}
+                    <code>ihr-slug</code> mit Ihrem Kampagnen-Slug aus dem Dashboard (Kampagnen →
+                    Widget-Slug).
+                  </AlertDescription>
+                </Alert>
 
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      2
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Script im Head einfügen</h4>
+                <Tabs defaultValue="embed" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="embed">Embed Element (Einfach)</TabsTrigger>
+                    <TabsTrigger value="custom">Custom Code (Performant)</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="embed" className="space-y-4">
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Schritt 1:</strong> Öffnen Sie Ihre Seite im Webflow Designer
+                        <br />
+                        <strong>Schritt 2:</strong> Fügen Sie ein <strong>&quot;Embed&quot;</strong>{' '}
+                        Element hinzu
+                        <br />
+                        <strong>Schritt 3:</strong> Fügen Sie folgenden Code ein:
+                      </p>
+
                       <div className="relative">
                         <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`<script src="${widgetScriptUrl}" defer></script>`}</code>
+                          <code>{`<!-- iFrame-Variante (funktioniert immer) -->
+<iframe
+  src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=10"
+  style="width: 100%; border: none; min-height: 400px;"
+  title="Kundenbewertungen"
+></iframe>
+
+<!-- WICHTIG: "ihr-slug" ersetzen! -->
+<!-- Dashboard → Kampagnen → Widget-Slug kopieren -->`}</code>
                         </pre>
                         <Button size="sm" variant="ghost" className="absolute right-2 top-2">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                  </div>
+                  </TabsContent>
 
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      3
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Embed-Element hinzufügen</h4>
-                      <p className="mb-3 text-sm text-muted-foreground">
-                        Ziehen Sie ein <strong>Embed</strong> Element auf die Seite und fügen Sie
-                        ein:
+                  <TabsContent value="custom" className="space-y-4">
+                    <Alert className="border-yellow-200 bg-yellow-50">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-yellow-900">
+                        <strong>Für bessere Performance:</strong> Laden Sie das Widget-Script global
+                        im Custom Code.
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Schritt 1:</strong> Page Settings → Custom Code → Before{' '}
+                        <code>&lt;/body&gt;</code> tag:
                       </p>
+
+                      <div className="relative">
+                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                          <code>{`<script src="https://kundenmagnet-app.de/widget.js" async></script>`}</code>
+                        </pre>
+                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Schritt 2:</strong> Auf der Seite ein Embed-Element mit:
+                      </p>
+
                       <div className="relative">
                         <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
                           <code>{`<div 
-  data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID"
+  data-kundenmagnet-widget
+  data-campaign="ihr-slug"
+  data-limit="10"
   data-theme="light"
-  data-limit="6"
-  data-layout="grid"
-></div>`}</code>
+></div>
+
+<!-- WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen! -->
+<!-- Wo finden? Dashboard → Kampagnen → Widget-Slug -->`}</code>
                         </pre>
                         <Button size="sm" variant="ghost" className="absolute right-2 top-2">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 
@@ -347,43 +505,56 @@ export default function PlatformInstallDocsPage() {
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>✨</span> Wix
                 </CardTitle>
-                <CardDescription>Einfach und intuitiv für kleine Unternehmen</CardDescription>
+                <CardDescription>Website-Baukasten mit Drag & Drop Editor</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Embed-Element hinzufügen</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Klicken Sie auf <strong>+ Hinzufügen → Embed → Embed-Code</strong>
-                      </p>
-                    </div>
-                  </div>
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Wichtig:</strong> Vergessen Sie nicht, <code>ihr-slug</code> durch Ihren
+                    Kampagnen-Slug zu ersetzen! (Dashboard → Kampagnen → Widget-Slug)
+                  </AlertDescription>
+                </Alert>
 
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      2
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Code einfügen</h4>
-                      <div className="relative">
-                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`<script src="${widgetScriptUrl}" defer></script>
-<div 
-  data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID"
-  data-theme="light"
-  data-limit="6"
-></div>`}</code>
-                        </pre>
-                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                          <Copy className="h-3 w-3" />
-                        </Button>
+                <div className="space-y-4">
+                  {[
+                    { step: 1, title: 'Seite im Wix-Editor öffnen' },
+                    { step: 2, title: 'Klicken Sie auf "+" → "Embed" → "Embed Code"' },
+                    { step: 3, title: 'Wählen Sie "Code" (nicht "Website")' },
+                    {
+                      step: 4,
+                      title: 'Fügen Sie den iFrame-Code ein (siehe unten)',
+                      content: true,
+                    },
+                    { step: 5, title: 'Größe anpassen und "Veröffentlichen" klicken' },
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        {item.step}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        {item.content && (
+                          <div className="relative mt-2">
+                            <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                              <code>{`<!-- Wix Embed Code -->
+<iframe
+  src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=8"
+  style="width: 100%; border: none; min-height: 450px;"
+  title="Kundenbewertungen"
+></iframe>
+
+<!-- WICHTIG: "ihr-slug" ersetzen mit Ihrem Kampagnen-Slug! -->
+<!-- Beispiel: campaign=wix-shop-bewertungen -->`}</code>
+                            </pre>
+                            <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -394,43 +565,50 @@ export default function PlatformInstallDocsPage() {
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>🔲</span> Squarespace
                 </CardTitle>
-                <CardDescription>Premium-Websites mit elegantem Design</CardDescription>
+                <CardDescription>Premium Website-Builder</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Code-Block hinzufügen</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Klicken Sie auf <strong>Block hinzufügen (+) → Code</strong>
-                      </p>
-                    </div>
-                  </div>
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> In Schritt 3 müssen Sie <code>ihr-slug</code> mit
+                    Ihrem Kampagnen-Slug aus dem Dashboard ersetzen!
+                  </AlertDescription>
+                </Alert>
 
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      2
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">HTML-Code einfügen</h4>
-                      <div className="relative">
-                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`<script src="${widgetScriptUrl}" defer></script>
-<div 
-  data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID"
-  data-theme="light"
-  data-limit="6"
-></div>`}</code>
-                        </pre>
-                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                          <Copy className="h-3 w-3" />
-                        </Button>
+                <div className="space-y-4">
+                  {[
+                    { step: 1, title: 'Seite bearbeiten im Squarespace-Editor' },
+                    { step: 2, title: 'Klicken Sie auf "+" → "Code"' },
+                    { step: 3, title: 'Fügen Sie den iFrame-Code ein:', content: true },
+                    { step: 4, title: 'Speichern und Veröffentlichen' },
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        {item.step}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        {item.content && (
+                          <div className="relative mt-2">
+                            <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                              <code>{`<iframe
+  src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=10"
+  style="width: 100%; border: none; min-height: 400px;"
+  title="Kundenbewertungen"
+></iframe>
+
+<!-- WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen! -->
+<!-- Dashboard → Kampagnen → Widget-Slug kopieren -->`}</code>
+                            </pre>
+                            <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -441,235 +619,385 @@ export default function PlatformInstallDocsPage() {
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>🛒</span> Shopware
                 </CardTitle>
-                <CardDescription>Deutschlands führende E-Commerce-Plattform</CardDescription>
+                <CardDescription>
+                  Deutsche E-Commerce-Plattform mit Shopping Experiences
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Shopping Experiences verwenden</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Gehen Sie zu <strong>Inhalte → Einkaufserlebnisse</strong> und fügen Sie ein{' '}
-                        <strong>HTML-Element</strong> hinzu
-                      </p>
-                    </div>
-                  </div>
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Ersetzen Sie in allen Code-Beispielen{' '}
+                    <code>ihr-slug</code> mit Ihrem Kampagnen-Slug aus Dashboard → Kampagnen →
+                    Widget-Slug.
+                  </AlertDescription>
+                </Alert>
 
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      2
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Widget-Code einfügen</h4>
-                      <div className="relative">
-                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`<script src="${widgetScriptUrl}" defer></script>
-<div 
-  data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID"
-  data-theme="light"
-  data-limit="3"
-></div>`}</code>
-                        </pre>
-                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                          <Copy className="h-3 w-3" />
-                        </Button>
+                <div className="space-y-4">
+                  {[
+                    { step: 1, title: 'Shopping Experiences → Neue Experience erstellen' },
+                    { step: 2, title: 'Layout auswählen → "HTML-Element" hinzufügen' },
+                    { step: 3, title: 'iFrame-Code einfügen:', content: true },
+                    { step: 4, title: 'Speichern und Seite zuweisen' },
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        {item.step}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        {item.content && (
+                          <div className="relative mt-2">
+                            <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                              <code>{`<!-- Shopware HTML-Element -->
+<div class="kundenmagnet-widget-container">
+  <h2>Kundenbewertungen</h2>
+  <iframe
+    src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=10"
+    style="width: 100%; border: none; min-height: 400px;"
+    title="Kundenbewertungen"
+  ></iframe>
+</div>
+
+<!-- WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen! -->
+<!-- Beispiel: campaign=shopware-store -->`}</code>
+                            </pre>
+                            <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      3
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Cache leeren</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Gehen Sie zu <strong>Einstellungen → System → Caches</strong> und löschen
-                        Sie alle Caches
-                      </p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Jimdo, IONOS, Framer, Carrd - kompakte Versionen */}
+            {/* Jimdo */}
             <Card id="jimdo" className="scroll-mt-20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>🌐</span> Jimdo
                 </CardTitle>
-                <CardDescription>Website-Baukasten für Einsteiger</CardDescription>
+                <CardDescription>Website-Baukasten Made in Germany</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  Klicken Sie auf <strong>+ Inhalte hinzufügen → Widget / HTML</strong> und fügen
-                  Sie den folgenden Code ein:
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`<script src="${widgetScriptUrl}" defer></script>
-<div data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID" data-theme="light" data-limit="6"></div>`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
+              <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Vergessen Sie nicht, <code>ihr-slug</code> mit
+                    Ihrem Kampagnen-Slug zu ersetzen (Dashboard → Kampagnen → Widget-Slug).
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-4">
+                  {[
+                    { step: 1, title: 'Seite bearbeiten in Jimdo' },
+                    { step: 2, title: 'Element hinzufügen → "Widget/HTML"' },
+                    { step: 3, title: 'iFrame-Code einfügen:', content: true },
+                    { step: 4, title: 'Speichern' },
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        {item.step}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        {item.content && (
+                          <div className="relative mt-2">
+                            <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                              <code>{`<iframe
+  src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=10"
+  style="width: 100%; border: none; min-height: 400px;"
+  title="Kundenbewertungen"
+></iframe>
+
+<!-- WICHTIG: "ihr-slug" ersetzen! -->
+<!-- Dashboard → Kampagnen → Widget-Slug -->`}</code>
+                            </pre>
+                            <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
+            {/* IONOS */}
             <Card id="ionos" className="scroll-mt-20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>☁️</span> IONOS (1&1)
                 </CardTitle>
-                <CardDescription>Website-Baukasten und Hosting</CardDescription>
+                <CardDescription>MyWebsite & Hosted Websites</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  Klicken Sie auf{' '}
-                  <strong>+ Element hinzufügen → Weitere Elemente → HTML-Code</strong> und fügen Sie
-                  ein:
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`<script src="${widgetScriptUrl}" defer></script>
-<div data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID" data-theme="light" data-limit="6"></div>`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
+              <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Ersetzen Sie <code>ihr-slug</code> mit Ihrem
+                    Kampagnen-Slug aus dem Dashboard (Kampagnen → Widget-Slug).
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-4">
+                  {[
+                    { step: 1, title: 'IONOS Website bearbeiten' },
+                    { step: 2, title: 'Element hinzufügen → "HTML"' },
+                    { step: 3, title: 'iFrame-Code einfügen:', content: true },
+                    { step: 4, title: 'Veröffentlichen' },
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        {item.step}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        {item.content && (
+                          <div className="relative mt-2">
+                            <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                              <code>{`<iframe
+  src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=10"
+  style="width: 100%; border: none; min-height: 400px;"
+  title="Kundenbewertungen"
+></iframe>
+
+<!-- WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen! -->`}</code>
+                            </pre>
+                            <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
+            {/* Framer */}
             <Card id="framer" className="scroll-mt-20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>⚡</span> Framer
                 </CardTitle>
-                <CardDescription>Modernes Design-Tool für interaktive Websites</CardDescription>
+                <CardDescription>Design-to-Code Website-Builder</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  Fügen Sie eine <strong>Embed</strong> Komponente hinzu (Taste <kbd>E</kbd>),
-                  wählen Sie <strong>HTML</strong> und fügen Sie ein:
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`<script src="${widgetScriptUrl}" defer></script>
-<div data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID" data-theme="light" data-limit="6" data-layout="grid"></div>`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
+              <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> In allen Code-Beispielen <code>ihr-slug</code>{' '}
+                    mit Ihrem Kampagnen-Slug ersetzen (Dashboard → Kampagnen → Widget-Slug).
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-4">
+                  {[
+                    { step: 1, title: 'Framer-Projekt öffnen' },
+                    { step: 2, title: 'Insert → Embed' },
+                    { step: 3, title: 'iFrame-Code einfügen:', content: true },
+                    { step: 4, title: 'Größe anpassen und Veröffentlichen' },
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        {item.step}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        {item.content && (
+                          <div className="relative mt-2">
+                            <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                              <code>{`<iframe
+  src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=10"
+  style="width: 100%; border: none; min-height: 400px;"
+  title="Kundenbewertungen"
+></iframe>
+
+<!-- WICHTIG: "ihr-slug" ersetzen! -->`}</code>
+                            </pre>
+                            <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
+            {/* Carrd */}
             <Card id="carrd" className="scroll-mt-20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>📄</span> Carrd
                 </CardTitle>
-                <CardDescription>One-Page-Websites mit minimalem Aufwand</CardDescription>
+                <CardDescription>Simple One-Page Website Builder</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  Klicken Sie auf <strong>+ Element hinzufügen → Embed</strong>, wählen Sie{' '}
-                  <strong>Code</strong> und fügen Sie ein:
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`<script src="${widgetScriptUrl}" defer></script>
-<div data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID" data-theme="light" data-limit="3"></div>`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
+              <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Ersetzen Sie <code>ihr-slug</code> mit Ihrem
+                    Kampagnen-Slug (Dashboard → Kampagnen → Widget-Slug).
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-4">
+                  {[
+                    { step: 1, title: 'Carrd-Seite bearbeiten' },
+                    { step: 2, title: 'Container hinzufügen → "Embed"' },
+                    { step: 3, title: 'Code Style: "Inline" auswählen' },
+                    { step: 4, title: 'iFrame-Code einfügen:', content: true },
+                    { step: 5, title: 'Veröffentlichen (Pro-Feature erforderlich)' },
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        {item.step}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        {item.content && (
+                          <div className="relative mt-2">
+                            <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                              <code>{`<iframe
+  src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=6"
+  style="width: 100%; border: none; min-height: 350px;"
+  title="Kundenbewertungen"
+></iframe>
+
+<!-- WICHTIG: "ihr-slug" ersetzen! -->`}</code>
+                            </pre>
+                            <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900 dark:bg-yellow-950/20">
-                  <p className="text-xs font-medium text-yellow-900 dark:text-yellow-100">
-                    ⚠️ Hinweis: Embed-Funktion nur in Carrd Pro verfügbar
-                  </p>
-                </div>
+
+                <Alert className="border-yellow-200 bg-yellow-50">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-900">
+                    <strong>Hinweis:</strong> Embed-Code ist ein Pro-Feature bei Carrd (ab $9/Jahr)
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
 
-            {/* Statische HTML-Seiten */}
+            {/* Statisches HTML */}
             <Card id="static" className="scroll-mt-20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
-                  <span>💻</span> Statische HTML-Seiten
+                  <span>💻</span> Statisches HTML
                 </CardTitle>
-                <CardDescription>
-                  Für selbst gehostete oder handgeschriebene Websites
-                </CardDescription>
+                <CardDescription>Für reine HTML/CSS/JavaScript-Websites ohne CMS</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Im Code-Beispiel unten müssen Sie{' '}
+                    <code>ihr-slug</code> mit Ihrem Kampagnen-Slug ersetzen (Dashboard → Kampagnen →
+                    Widget-Slug).
+                  </AlertDescription>
+                </Alert>
+
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">
-                        Script vor <code>&lt;/head&gt;</code> einfügen
-                      </h4>
-                      <div className="relative">
-                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`<!DOCTYPE html>
+                  <p className="text-sm text-muted-foreground">
+                    Komplettes HTML-Beispiel mit Widget-Integration:
+                  </p>
+
+                  <div className="relative">
+                    <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                      <code>{`<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Meine Website</title>
-  
-  <!-- Kundenmagnetapp Widget Script -->
-  <script src="${widgetScriptUrl}" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meine Website - Kundenbewertungen</title>
+    <style>
+        .testimonials {
+            max-width: 1200px;
+            margin: 60px auto;
+            padding: 0 20px;
+        }
+        .testimonials h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+    </style>
 </head>
 <body>
-  ...
+    <header>
+        <h1>Meine Website</h1>
+    </header>
+    
+    <main>
+        <section class="testimonials">
+            <h2>Das sagen unsere Kunden</h2>
+            
+            <!-- iFrame-Variante (Empfohlen) -->
+            <iframe
+                src="https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&limit=10"
+                style="width: 100%; border: none; min-height: 400px;"
+                title="Kundenbewertungen"
+            ></iframe>
+            
+            <!-- ODER JavaScript-Variante (mit automatischem Fallback): -->
+            <!--
+            <div 
+                data-kundenmagnet-widget
+                data-campaign="ihr-slug"
+                data-limit="10"
+                data-theme="light"
+            ></div>
+            <script src="https://kundenmagnet-app.de/widget.js" async></script>
+            -->
+        </section>
+    </main>
+    
+    <footer>
+        <p>&copy; 2025 Meine Website</p>
+    </footer>
 </body>
-</html>`}</code>
-                        </pre>
-                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
+</html>
+
+<!-- WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen! -->
+<!-- Dashboard → Kampagnen → Widget-Slug kopieren -->
+<!-- Beispiel: campaign=meine-webseite -->`}</code>
+                    </pre>
+                    <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                      <Copy className="h-3 w-3" />
+                    </Button>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      2
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                      <h4 className="mb-2 font-semibold text-blue-900">iFrame-Variante</h4>
+                      <ul className="space-y-1 text-sm text-blue-800">
+                        <li>✓ Funktioniert garantiert überall</li>
+                        <li>✓ Kein JavaScript nötig</li>
+                        <li>✓ Einfachste Integration</li>
+                      </ul>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Widget-Container im Body platzieren</h4>
-                      <div className="relative">
-                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`<body>
-  <h1>Willkommen</h1>
-  
-  <!-- Bewertungen -->
-  <section>
-    <h2>Was unsere Kunden sagen</h2>
-    <div 
-      data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID"
-      data-theme="light"
-      data-limit="6"
-      data-layout="grid"
-    ></div>
-  </section>
-  
-</body>`}</code>
-                        </pre>
-                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
+                    <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
+                      <h4 className="mb-2 font-semibold text-purple-900">JavaScript-Variante</h4>
+                      <ul className="space-y-1 text-sm text-purple-800">
+                        <li>✓ Bessere Performance</li>
+                        <li>✓ Shadow DOM (isoliert)</li>
+                        <li>✓ Auto-Fallback zu iFrame</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
@@ -686,213 +1014,314 @@ export default function PlatformInstallDocsPage() {
           </div>
 
           <div className="space-y-8">
-            {/* React / Next.js */}
+            {/* React/Next.js */}
             <Card id="react" className="scroll-mt-20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>⚛️</span> React / Next.js
                 </CardTitle>
                 <CardDescription>
-                  Für moderne React-Anwendungen (Create React App, Vite, Next.js)
+                  Moderne React-Anwendungen (Create React App, Vite, Next.js App Router)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> In allen React-Komponenten müssen Sie den{' '}
+                    <code>campaign</code>-Prop mit Ihrem Kampagnen-Slug aus dem Dashboard füllen!
+                  </AlertDescription>
+                </Alert>
+
                 <Tabs defaultValue="nextjs" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="nextjs">Next.js</TabsTrigger>
-                    <TabsTrigger value="cra">React (CRA)</TabsTrigger>
-                    <TabsTrigger value="vite">Vite</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="nextjs">Next.js (App Router)</TabsTrigger>
+                    <TabsTrigger value="react">React (CRA/Vite)</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="nextjs" className="space-y-4">
                     <div className="space-y-4">
-                      <h4 className="font-medium">Next.js App Router (Next.js 13+)</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>1. Script in layout.tsx laden:</strong>
+                        <strong>Schritt 1:</strong> Erstellen Sie eine wiederverwendbare Komponente:
                       </p>
+
                       <div className="relative">
                         <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`// app/layout.tsx
+                          <code>{`// app/components/KundenmagnetWidget.tsx
+'use client'
+
 import Script from 'next/script'
 
-export default function RootLayout({ children }) {
+interface Props {
+  campaign: string  // Kampagnen-Slug aus Dashboard!
+  limit?: number
+  theme?: 'light' | 'dark' | 'auto'
+}
+
+export function KundenmagnetWidget({ 
+  campaign,  // WICHTIG: Hier Ihren Slug übergeben!
+  limit = 10, 
+  theme = 'light' 
+}: Props) {
   return (
-    <html lang="de">
-      <body>
-        {children}
-        <Script 
-          src="${widgetScriptUrl}" 
-          strategy="lazyOnload" 
-        />
-      </body>
-    </html>
+    <>
+      <div
+        data-kundenmagnet-widget
+        data-campaign={campaign}
+        data-limit={limit}
+        data-theme={theme}
+      />
+      <Script 
+        src="https://kundenmagnet-app.de/widget.js" 
+        strategy="lazyOnload"
+      />
+    </>
   )
-}`}</code>
+}
+
+/* Verwendung in Ihrer page.tsx:
+   
+   import { KundenmagnetWidget } from '@/components/KundenmagnetWidget'
+   
+   <KundenmagnetWidget campaign="ihr-slug" limit={8} />
+   
+   WICHTIG: "ihr-slug" ersetzen!
+   Dashboard → Kampagnen → Widget-Slug kopieren
+   Beispiel: campaign="mein-nextjs-shop"
+*/`}</code>
                         </pre>
                         <Button size="sm" variant="ghost" className="absolute right-2 top-2">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
 
-                      <p className="text-sm text-muted-foreground">
-                        <strong>2. Widget-Komponente erstellen:</strong>
-                      </p>
+                      <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                        <h4 className="mb-2 text-sm font-semibold text-orange-900">
+                          Verwendungsbeispiel:
+                        </h4>
+                        <pre className="overflow-x-auto rounded bg-white p-3 text-xs">
+                          <code>{`// app/page.tsx
+import { KundenmagnetWidget } from '@/components/KundenmagnetWidget'
+
+export default function HomePage() {
+  return (
+    <main>
+      <h1>Willkommen</h1>
+      
+      <section className="testimonials">
+        <h2>Kundenbewertungen</h2>
+        {/* Ihren Kampagnen-Slug hier einfügen! */}
+        <KundenmagnetWidget campaign="mein-shop" limit={8} theme="light" />
+      </section>
+    </main>
+  )
+}`}</code>
+                        </pre>
+                        <p className="mt-2 text-xs text-orange-700">
+                          <strong>Denken Sie daran:</strong> <code>&quot;mein-shop&quot;</code> mit
+                          Ihrem tatsächlichen Kampagnen-Slug ersetzen!
+                        </p>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="react" className="space-y-4">
+                    <div className="space-y-4">
                       <div className="relative">
                         <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
                           <code>{`// components/KundenmagnetWidget.tsx
-'use client'
+import { useEffect } from 'react'
 
 interface Props {
-  campaignId: string
-  theme?: 'light' | 'dark'
+  campaign: string  // Kampagnen-Slug aus Dashboard!
   limit?: number
-  layout?: 'list' | 'grid' | 'carousel'
+  theme?: 'light' | 'dark' | 'auto'
 }
 
-export function KundenmagnetWidget({
-  campaignId,
-  theme = 'light',
-  limit = 6,
-  layout = 'grid'
+export function KundenmagnetWidget({ 
+  campaign,  // WICHTIG: Hier Ihren Slug übergeben!
+  limit = 10, 
+  theme = 'light' 
 }: Props) {
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://kundenmagnet-app.de/widget.js'
+    script.async = true
+    document.body.appendChild(script)
+
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
+
   return (
     <div
-      data-kundenmagnet-campaign={campaignId}
-      data-theme={theme}
+      data-kundenmagnet-widget
+      data-campaign={campaign}
       data-limit={limit}
-      data-layout={layout}
+      data-theme={theme}
     />
   )
-}`}</code>
-                        </pre>
-                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
+}
 
-                      <p className="text-sm text-muted-foreground">
-                        <strong>3. Verwenden:</strong>
-                      </p>
-                      <div className="relative">
-                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`import { KundenmagnetWidget } from '@/components/KundenmagnetWidget'
-
-<KundenmagnetWidget 
-  campaignId="ihre-kampagne-id"
-  theme="light"
-  limit={6}
-/>`}</code>
+/* Verwendung:
+   
+   <KundenmagnetWidget campaign="ihr-slug" limit={8} />
+   
+   WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen!
+   Dashboard → Kampagnen → Widget-Slug kopieren
+*/`}</code>
                         </pre>
                         <Button size="sm" variant="ghost" className="absolute right-2 top-2">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                  </TabsContent>
-
-                  <TabsContent value="cra" className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      <strong>1. Script in public/index.html laden:</strong>
-                    </p>
-                    <div className="relative">
-                      <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                        <code>{`<!-- public/index.html -->
-<head>
-  <script src="${widgetScriptUrl}" defer></script>
-</head>`}</code>
-                      </pre>
-                      <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    <p className="text-sm text-muted-foreground">
-                      <strong>2. Komponente erstellen und verwenden:</strong>
-                    </p>
-                    <div className="relative">
-                      <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                        <code>{`export function KundenmagnetWidget({ campaignId, theme, limit }) {
-  return (
-    <div
-      data-kundenmagnet-campaign={campaignId}
-      data-theme={theme || 'light'}
-      data-limit={limit || 6}
-    />
-  )
-}`}</code>
-                      </pre>
-                      <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="vite" className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Für Vite: Script in <code>index.html</code> laden wie bei Create React App,
-                      dann die gleiche Komponente verwenden.
-                    </p>
                   </TabsContent>
                 </Tabs>
               </CardContent>
             </Card>
 
-            {/* Vue / Nuxt */}
+            {/* Vue/Nuxt */}
             <Card id="vue" className="scroll-mt-20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
-                  <span>🖖</span> Vue.js / Nuxt
+                  <span>💚</span> Vue / Nuxt
                 </CardTitle>
-                <CardDescription>Für Vue 3 und Nuxt 3 Anwendungen</CardDescription>
+                <CardDescription>Progressive JavaScript Framework</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Nuxt 3: Script in nuxt.config.ts registrieren:</strong>
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`// nuxt.config.ts
-export default defineNuxtConfig({
-  app: {
-    head: {
-      script: [
-        { src: '${widgetScriptUrl}', defer: true }
-      ]
-    }
-  }
-})`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Im <code>campaign</code>-Prop müssen Sie Ihren
+                    Kampagnen-Slug aus dem Dashboard übergeben!
+                  </AlertDescription>
+                </Alert>
 
-                <p className="text-sm text-muted-foreground">
-                  <strong>Widget-Komponente:</strong>
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`<!-- components/KundenmagnetWidget.vue -->
+                <Tabs defaultValue="nuxt" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="nuxt">Nuxt 3</TabsTrigger>
+                    <TabsTrigger value="vue">Vue 3</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="nuxt" className="space-y-4">
+                    <div className="relative">
+                      <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                        <code>{`<!-- components/KundenmagnetWidget.vue -->
 <template>
-  <div
-    :data-kundenmagnet-campaign="campaignId"
-    :data-theme="theme"
-    :data-limit="limit"
-  ></div>
+  <div>
+    <div
+      data-kundenmagnet-widget
+      :data-campaign="campaign"
+      :data-limit="limit"
+      :data-theme="theme"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+// Props mit TypeScript
+interface Props {
+  campaign: string  // Kampagnen-Slug aus Dashboard!
+  limit?: number
+  theme?: 'light' | 'dark' | 'auto'
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  limit: 10,
+  theme: 'light'
+})
+
+// Script laden
+useHead({
+  script: [
+    {
+      src: 'https://kundenmagnet-app.de/widget.js',
+      async: true
+    }
+  ]
+})
+</script>
+
+<!-- Verwendung in Ihrer Seite:
+     
+     <KundenmagnetWidget campaign="ihr-slug" :limit="8" />
+     
+     WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen!
+     Dashboard → Kampagnen → Widget-Slug kopieren
+-->`}</code>
+                      </pre>
+                      <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="vue" className="space-y-4">
+                    <div className="relative">
+                      <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                        <code>{`<!-- components/KundenmagnetWidget.vue -->
+<template>
+  <div>
+    <div
+      data-kundenmagnet-widget
+      :data-campaign="campaign"
+      :data-limit="limit"
+      :data-theme="theme"
+    />
+  </div>
 </template>
 
 <script setup>
+import { onMounted, onUnmounted } from 'vue'
+
+// Props definieren
 const props = defineProps({
-  campaignId: String,
-  theme: { type: String, default: 'light' },
-  limit: { type: Number, default: 6 }
+  campaign: {
+    type: String,
+    required: true  // Kampagnen-Slug ist Pflicht!
+  },
+  limit: {
+    type: Number,
+    default: 10
+  },
+  theme: {
+    type: String,
+    default: 'light'
+  }
 })
-</script>`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
+
+let script = null
+
+onMounted(() => {
+  script = document.createElement('script')
+  script.src = 'https://kundenmagnet-app.de/widget.js'
+  script.async = true
+  document.body.appendChild(script)
+})
+
+onUnmounted(() => {
+  if (script) {
+    document.body.removeChild(script)
+  }
+})
+</script>
+
+<!-- Verwendung:
+     
+     <KundenmagnetWidget campaign="ihr-slug" :limit="8" />
+     
+     WICHTIG: "ihr-slug" ersetzen!
+     Dashboard → Kampagnen → Widget-Slug
+-->`}</code>
+                      </pre>
+                      <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 
@@ -902,435 +1331,156 @@ const props = defineProps({
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>🅰️</span> Angular
                 </CardTitle>
-                <CardDescription>Für Angular 15+ Anwendungen</CardDescription>
+                <CardDescription>Enterprise TypeScript Framework</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <p className="text-sm text-muted-foreground">
-                  <strong>1. Script in angular.json registrieren:</strong>
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`// angular.json
-"scripts": [
-  "${widgetScriptUrl}"
-]`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Übergeben Sie Ihren Kampagnen-Slug als{' '}
+                    <code>@Input()</code> an die Komponente!
+                  </AlertDescription>
+                </Alert>
 
-                <p className="text-sm text-muted-foreground">
-                  <strong>2. Komponente erstellen:</strong>
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`import { Component, Input } from '@angular/core'
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Schritt 1:</strong> Script in <code>angular.json</code> registrieren:
+                  </p>
+
+                  <div className="relative">
+                    <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                      <code>{`// angular.json
+{
+  "projects": {
+    "your-app": {
+      "architect": {
+        "build": {
+          "options": {
+            "scripts": [
+              "https://kundenmagnet-app.de/widget.js"
+            ]
+          }
+        }
+      }
+    }
+  }
+}`}</code>
+                    </pre>
+                    <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Schritt 2:</strong> Komponente erstellen:
+                  </p>
+
+                  <div className="relative">
+                    <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                      <code>{`// kundenmagnet-widget.component.ts
+import { Component, Input } from '@angular/core'
 
 @Component({
   selector: 'app-kundenmagnet-widget',
   template: \`
     <div
-      [attr.data-kundenmagnet-campaign]="campaignId"
-      [attr.data-theme]="theme"
+      data-kundenmagnet-widget
+      [attr.data-campaign]="campaign"
       [attr.data-limit]="limit"
+      [attr.data-theme]="theme"
     ></div>
-  \`
+  \`,
+  standalone: true
 })
 export class KundenmagnetWidgetComponent {
-  @Input() campaignId!: string
-  @Input() theme: string = 'light'
-  @Input() limit: number = 6
-}`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
+  @Input() campaign!: string  // Kampagnen-Slug aus Dashboard!
+  @Input() limit: number = 10
+  @Input() theme: 'light' | 'dark' | 'auto' = 'light'
+}
+
+/* Verwendung in Ihrem Template:
+   
+   <app-kundenmagnet-widget 
+     campaign="ihr-slug" 
+     [limit]="8"
+     theme="light">
+   </app-kundenmagnet-widget>
+   
+   WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen!
+   Dashboard → Kampagnen → Widget-Slug kopieren
+*/`}</code>
+                    </pre>
+                    <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Svelte */}
+            {/* Svelte/SvelteKit */}
             <Card id="svelte" className="scroll-mt-20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <span>🔥</span> Svelte / SvelteKit
                 </CardTitle>
-                <CardDescription>Für Svelte 4+ und SvelteKit</CardDescription>
+                <CardDescription>Cybernetically Enhanced Web Apps</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <p className="text-sm text-muted-foreground">
-                  <strong>SvelteKit: Script in app.html laden:</strong>
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`<!-- src/app.html -->
-<head>
-  <script src="${widgetScriptUrl}" defer></script>
-  %sveltekit.head%
-</head>`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Übergeben Sie Ihren Kampagnen-Slug als Prop an
+                    die Svelte-Komponente!
+                  </AlertDescription>
+                </Alert>
 
-                <p className="text-sm text-muted-foreground">
-                  <strong>Widget-Komponente:</strong>
-                </p>
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                    <code>{`<!-- KundenmagnetWidget.svelte -->
-<script>
-  export let campaignId
-  export let theme = 'light'
-  export let limit = 6
+                <div className="space-y-4">
+                  <div className="relative">
+                    <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                      <code>{`<!-- KundenmagnetWidget.svelte -->
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte'
+  
+  // Props mit TypeScript
+  export let campaign: string  // Kampagnen-Slug aus Dashboard!
+  export let limit: number = 10
+  export let theme: 'light' | 'dark' | 'auto' = 'light'
+  
+  let script: HTMLScriptElement | null = null
+  
+  onMount(() => {
+    script = document.createElement('script')
+    script.src = 'https://kundenmagnet-app.de/widget.js'
+    script.async = true
+    document.body.appendChild(script)
+  })
+  
+  onDestroy(() => {
+    if (script) {
+      document.body.removeChild(script)
+    }
+  })
 </script>
 
 <div
-  data-kundenmagnet-campaign={campaignId}
-  data-theme={theme}
+  data-kundenmagnet-widget
+  data-campaign={campaign}
   data-limit={limit}
-></div>`}</code>
-                  </pre>
-                  <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+  data-theme={theme}
+/>
 
-        {/* Phase 3: Erweitert */}
-        <div className="mb-12">
-          <div className="mb-6 flex items-center gap-2">
-            <Layers className="h-6 w-6 text-primary" />
-            <h2 className="text-3xl font-bold">Phase 3: Erweiterte Integration</h2>
-          </div>
-
-          <div className="space-y-8">
-            {/* Google Tag Manager */}
-            <Card id="gtm" className="scroll-mt-20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <span>📊</span> Google Tag Manager (GTM)
-                </CardTitle>
-                <CardDescription>
-                  Zentrale Verwaltung aller Marketing-Tags und Scripts
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Neuen Tag erstellen</h4>
-                      <p className="text-sm text-muted-foreground">
-                        GTM Dashboard → <strong>Tags → Neu</strong>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      2
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Tag-Konfiguration</h4>
-                      <ul className="mb-3 space-y-1 text-sm text-muted-foreground">
-                        <li>
-                          • Tag-Typ: <strong>Benutzerdefiniertes HTML</strong>
-                        </li>
-                        <li>• Name: &quot;Kundenmagnetapp Widget&quot;</li>
-                      </ul>
-                      <div className="relative">
-                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                          <code>{`<script>
-  (function() {
-    var script = document.createElement('script');
-    script.src = '${widgetScriptUrl}';
-    script.defer = true;
-    document.head.appendChild(script);
-  })();
-</script>
-
-<div 
-  data-kundenmagnet-campaign="IHRE-KAMPAGNEN-ID"
-  data-theme="light"
-  data-limit="6"
-></div>`}</code>
-                        </pre>
-                        <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      3
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Trigger festlegen</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Trigger-Typ: <strong>Seitenaufruf</strong> (z.B. nur auf Bewertungsseiten)
-                        oder <strong>Alle Seiten</strong>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      4
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="mb-2 font-medium">Veröffentlichen</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Klicken Sie auf <strong>Senden</strong> und veröffentlichen Sie den
-                        Container.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
-                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                    💡 Profi-Tipp: DataLayer-Variablen
-                  </p>
-                  <p className="mt-1 text-xs text-blue-800 dark:text-blue-200">
-                    Sie können die Kampagnen-ID dynamisch aus dem GTM Datalay er übergeben:
-                    Erstellen Sie eine Variable und nutzen Sie <code>{'{{dlv - campaignId}}'}</code>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* CSP & CORS */}
-            <Card id="csp" className="scroll-mt-20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <span>🔒</span> CSP & CORS Konfiguration
-                </CardTitle>
-                <CardDescription>
-                  Content Security Policy und Cross-Origin Resource Sharing
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="mb-2 font-medium">Content Security Policy (CSP)</h4>
-                    <p className="mb-3 text-sm text-muted-foreground">
-                      Falls Ihre Website eine strikte CSP verwendet, fügen Sie folgende Domains zur
-                      Whitelist hinzu:
-                    </p>
-                    <div className="relative">
-                      <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                        <code>{`Content-Security-Policy:
-  script-src 'self' https://${BRAND.domain};
-  connect-src 'self' https://${BRAND.domain};
-  img-src 'self' https://${BRAND.domain} data:;`}</code>
-                      </pre>
-                      <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="mb-2 font-medium">CORS Headers</h4>
-                    <p className="mb-3 text-sm text-muted-foreground">
-                      Das Widget nutzt CORS-kompatible Requests. Keine zusätzliche Konfiguration
-                      erforderlich. Falls Sie einen Reverse Proxy verwenden, stellen Sie sicher,
-                      dass CORS-Header durchgereicht werden.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="mb-2 font-medium">iFrame-Sandbox (falls verwendet)</h4>
-                    <p className="mb-3 text-sm text-muted-foreground">
-                      Wenn Sie das iFrame-Fallback verwenden, erlauben Sie:
-                    </p>
-                    <div className="relative">
-                      <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                        <code>{`<iframe
-  src="https://${BRAND.domain}/widget/frame?campaign=IHRE-ID"
-  sandbox="allow-scripts allow-same-origin"
-  style="border:none; width:100%; height:600px;"
-></iframe>`}</code>
-                      </pre>
-                      <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Caching & Performance */}
-            <Card id="caching" className="scroll-mt-20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <span>⚡</span> Caching & Performance
-                </CardTitle>
-                <CardDescription>
-                  Optimieren Sie die Ladezeit und das Caching-Verhalten
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="mb-2 font-medium">Widget-Script Caching</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Das Widget-Script wird mit einem Cache-Header von <strong>1 Jahr</strong>{' '}
-                      ausgeliefert. Nutzen Sie die versionierte URL für kontrollierbares Caching:
-                    </p>
-                    <div className="relative mt-3">
-                      <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                        <code>{`<script src="${widgetScriptUrl}?v=20250103" defer></script>`}</code>
-                      </pre>
-                      <Button size="sm" variant="ghost" className="absolute right-2 top-2">
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="mb-2 font-medium">Lazy Loading</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Das Widget lädt Bewertungen erst, wenn es im Viewport sichtbar wird
-                      (Intersection Observer). Keine zusätzliche Konfiguration erforderlich.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="mb-2 font-medium">CDN & Edge Caching</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Das Widget wird über ein globales CDN ausgeliefert. Die nächste Edge-Location
-                      wird automatisch gewählt. Bewertungen werden für <strong>5 Minuten</strong>{' '}
-                      gecacht.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-lg border p-4 text-center">
-                      <div className="text-2xl font-bold text-primary">&lt; 20KB</div>
-                      <div className="text-sm text-muted-foreground">Script-Größe (gzip)</div>
-                    </div>
-                    <div className="rounded-lg border p-4 text-center">
-                      <div className="text-2xl font-bold text-primary">&lt; 100ms</div>
-                      <div className="text-sm text-muted-foreground">Durchschn. Ladezeit</div>
-                    </div>
-                    <div className="rounded-lg border p-4 text-center">
-                      <div className="text-2xl font-bold text-primary">A+</div>
-                      <div className="text-sm text-muted-foreground">PageSpeed Score</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Widget-Attribute */}
-            <Card id="attributes" className="scroll-mt-20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <span>⚙️</span> Widget-Attribute Referenz
-                </CardTitle>
-                <CardDescription>
-                  Alle verfügbaren Data-Attribute zur Anpassung des Widgets
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="p-2 text-left font-medium">Attribut</th>
-                        <th className="p-2 text-left font-medium">Werte</th>
-                        <th className="p-2 text-left font-medium">Standard</th>
-                        <th className="p-2 text-left font-medium">Beschreibung</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-xs">
-                      <tr className="border-b">
-                        <td className="p-2">
-                          <code>data-kundenmagnet-campaign</code>
-                        </td>
-                        <td className="p-2">String</td>
-                        <td className="p-2">
-                          <em>Erforderlich</em>
-                        </td>
-                        <td className="p-2">Ihre Kampagnen-ID</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-2">
-                          <code>data-theme</code>
-                        </td>
-                        <td className="p-2">light | dark</td>
-                        <td className="p-2">light</td>
-                        <td className="p-2">Farbschema des Widgets</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-2">
-                          <code>data-limit</code>
-                        </td>
-                        <td className="p-2">1-20</td>
-                        <td className="p-2">6</td>
-                        <td className="p-2">Anzahl der angezeigten Bewertungen</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-2">
-                          <code>data-layout</code>
-                        </td>
-                        <td className="p-2">list | grid | carousel</td>
-                        <td className="p-2">grid</td>
-                        <td className="p-2">Layout-Darstellung</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-2">
-                          <code>data-sort</code>
-                        </td>
-                        <td className="p-2">recent | rating</td>
-                        <td className="p-2">recent</td>
-                        <td className="p-2">Sortierung der Bewertungen</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-2">
-                          <code>data-show-date</code>
-                        </td>
-                        <td className="p-2">true | false</td>
-                        <td className="p-2">true</td>
-                        <td className="p-2">Datum anzeigen</td>
-                      </tr>
-                      <tr>
-                        <td className="p-2">
-                          <code>data-show-author</code>
-                        </td>
-                        <td className="p-2">true | false</td>
-                        <td className="p-2">true</td>
-                        <td className="p-2">Autor-Name anzeigen</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="mt-4">
-                  <h4 className="mb-2 text-sm font-medium">Beispiel mit allen Optionen:</h4>
-                  <div className="relative">
-                    <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-                      <code>{`<div 
-  data-kundenmagnet-campaign="ihre-kampagne-id"
-  data-theme="dark"
-  data-limit="12"
-  data-layout="carousel"
-  data-sort="rating"
-  data-show-date="true"
-  data-show-author="true"
-></div>`}</code>
+<!-- Verwendung in Ihrer Seite:
+     
+     <script>
+       import KundenmagnetWidget from './KundenmagnetWidget.svelte'
+     </script>
+     
+     <KundenmagnetWidget campaign="ihr-slug" limit={8} />
+     
+     WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen!
+     Dashboard → Kampagnen → Widget-Slug kopieren
+-->`}</code>
                     </pre>
                     <Button size="sm" variant="ghost" className="absolute right-2 top-2">
                       <Copy className="h-3 w-3" />
@@ -1342,32 +1492,285 @@ export class KundenmagnetWidgetComponent {
           </div>
         </div>
 
-        {/* Support & Hilfe */}
-        <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
+        {/* Phase 3: Erweiterte Integration */}
+        <div className="mb-12">
+          <div className="mb-6 flex items-center gap-2">
+            <Plug className="h-6 w-6 text-primary" />
+            <h2 className="text-3xl font-bold">Phase 3: Erweiterte Integration</h2>
+          </div>
+
+          <div className="space-y-8">
+            {/* Google Tag Manager */}
+            <Card id="gtm" className="scroll-mt-20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <span>📊</span> Google Tag Manager
+                </CardTitle>
+                <CardDescription>
+                  Widget über GTM ohne Code-Änderungen auf der Website einbinden
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Im GTM-Tag müssen Sie <code>ihr-slug</code> mit
+                    Ihrem Kampagnen-Slug ersetzen!
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-4">
+                  {[
+                    { step: 1, title: 'Google Tag Manager öffnen' },
+                    { step: 2, title: 'Neuen Tag erstellen → "Custom HTML"' },
+                    {
+                      step: 3,
+                      title: 'HTML-Code einfügen (siehe unten)',
+                      content: true,
+                    },
+                    {
+                      step: 4,
+                      title:
+                        'Trigger auswählen: "All Pages" oder spezifische Seite (z.B. "/bewertungen")',
+                    },
+                    { step: 5, title: 'Tag speichern und Container veröffentlichen' },
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        {item.step}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        {item.content && (
+                          <div className="relative mt-2">
+                            <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                              <code>{`<!-- GTM Custom HTML Tag -->
+<div 
+  data-kundenmagnet-widget
+  data-campaign="ihr-slug"
+  data-limit="10"
+  data-theme="light"
+></div>
+<script src="https://kundenmagnet-app.de/widget.js" async></script>
+
+<!-- WICHTIG: "ihr-slug" durch Ihren Kampagnen-Slug ersetzen! -->
+<!-- Dashboard → Kampagnen → Widget-Slug kopieren -->
+<!-- Beispiel: data-campaign="gtm-website" -->`}</code>
+                            </pre>
+                            <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Alert className="border-green-200 bg-green-50">
+                  <AlertCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-900">
+                    <strong>Vorteil:</strong> Sie können das Widget über GTM auf mehreren Seiten
+                    gleichzeitig deployen ohne Code-Änderungen auf der Website!
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+
+            {/* CSP */}
+            <Card id="csp" className="scroll-mt-20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <span>🔒</span> Content Security Policy (CSP)
+                </CardTitle>
+                <CardDescription>
+                  Widget in Umgebungen mit strikten Security-Richtlinien
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert className="border-orange-200 bg-orange-50">
+                  <AlertCircle className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-orange-900">
+                    <strong>Wichtig:</strong> Auch bei CSP-Konfiguration müssen Sie in Ihrem
+                    Widget-Code <code>ihr-slug</code> mit Ihrem Kampagnen-Slug ersetzen!
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Falls Ihre Website eine strikte Content Security Policy hat, fügen Sie diese
+                    Domains zur Whitelist hinzu:
+                  </p>
+
+                  <div className="relative">
+                    <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
+                      <code>{`Content-Security-Policy:
+  script-src 'self' https://kundenmagnet-app.de;
+  frame-src 'self' https://kundenmagnet-app.de;
+  connect-src 'self' https://kundenmagnet-app.de;`}</code>
+                    </pre>
+                    <Button size="sm" variant="ghost" className="absolute right-2 top-2">
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  <Alert className="border-blue-200 bg-blue-50">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-900">
+                      <strong>Alternative:</strong> Verwenden Sie die iFrame-Variante, die in den
+                      meisten CSP-Umgebungen problemlos funktioniert:
+                      <code className="mt-2 block text-xs">
+                        &lt;iframe
+                        src=&quot;https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&quot;
+                        ...&gt;&lt;/iframe&gt;
+                      </code>
+                      <div className="mt-2 text-xs">
+                        (Ersetzen Sie <code>ihr-slug</code> mit Ihrem Kampagnen-Slug!)
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Caching */}
+            <Card id="caching" className="scroll-mt-20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <span>⚡</span> Caching & CDN-Integration
+                </CardTitle>
+                <CardDescription>
+                  Widget mit Cloudflare, Fastly oder anderen CDNs optimieren
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Slug-Hinweis:</strong> Unabhängig von Ihrer Cache-Konfiguration müssen
+                    Sie in Ihrem Widget-Code <code>ihr-slug</code> mit Ihrem Kampagnen-Slug
+                    ersetzen!
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Widget ist bereits optimiert für Caching:</h4>
+
+                  <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                    <li>
+                      <strong>Browser-Cache:</strong> Widget.js cached 5 Minuten
+                    </li>
+                    <li>
+                      <strong>API-Cache:</strong> Testimonials cached 60 Sekunden
+                    </li>
+                    <li>
+                      <strong>iFrame:</strong> Wird von CDNs automatisch cached
+                    </li>
+                    <li>
+                      <strong>Shadow DOM:</strong> Verhindert CSS-Konflikte
+                    </li>
+                  </ul>
+
+                  <Alert className="border-green-200 bg-green-50">
+                    <AlertCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-900">
+                      <strong>Empfehlung:</strong> Verwenden Sie die iFrame-Variante für maximale
+                      CDN-Kompatibilität:
+                      <code className="mt-2 block text-xs">
+                        &lt;iframe
+                        src=&quot;https://kundenmagnet-app.de/widget/frame?campaign=ihr-slug&quot;
+                        ...&gt;&lt;/iframe&gt;
+                      </code>
+                      <div className="mt-2 text-xs">
+                        (Dashboard → Kampagnen → Widget-Slug für <code>ihr-slug</code> kopieren!)
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                    <h4 className="mb-2 text-sm font-semibold text-yellow-900">
+                      Nach Widget-Updates:
+                    </h4>
+                    <ul className="space-y-1 text-xs text-yellow-800">
+                      <li>• Cache leeren: Browser (Strg+Shift+R)</li>
+                      <li>• CDN purgen: Falls Sie Cloudflare/Fastly verwenden</li>
+                      <li>• WordPress: WP Rocket / W3 Total Cache leeren</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Support */}
+        <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              Hilfe benötigt?
-            </CardTitle>
+            <CardTitle className="text-blue-900">Weitere Hilfe benötigt?</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-sm text-blue-900 dark:text-blue-100">
-              Falls Sie Probleme bei der Installation haben oder Ihre Plattform hier nicht
-              aufgeführt ist, kontaktieren Sie uns gerne:
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button variant="outline" asChild>
-                <a href={`mailto:${BRAND.email.support}`}>
-                  E-Mail Support
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/docs/widget">
-                  Widget-Dokumentation
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-blue-600 p-2 text-white">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-900">E-Mail Support</h4>
+                  <a
+                    href="mailto:support@kundenmagnet-app.de"
+                    className="text-blue-600 hover:underline"
+                  >
+                    support@kundenmagnet-app.de
+                  </a>
+                  <p className="mt-1 text-xs text-blue-700">
+                    Bitte geben Sie Ihren Kampagnen-Slug an, wenn Sie Hilfe benötigen!
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-blue-600 p-2 text-white">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-900">Weitere Dokumentation</h4>
+                  <div className="space-y-1">
+                    <Link href="/docs" className="block text-sm text-blue-600 hover:underline">
+                      Übersicht Dokumentation
+                    </Link>
+                    <Link
+                      href="/docs/widget"
+                      className="block text-sm text-blue-600 hover:underline"
+                    >
+                      Widget-Dokumentation
+                    </Link>
+                    <Link href="/docs/api" className="block text-sm text-blue-600 hover:underline">
+                      API-Dokumentation
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <Alert className="border-blue-300 bg-blue-100">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-900">
+                  <strong>Live-Chat:</strong> Verfügbar im Dashboard (unten rechts)
+                </AlertDescription>
+              </Alert>
             </div>
           </CardContent>
         </Card>
