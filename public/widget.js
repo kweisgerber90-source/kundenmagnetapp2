@@ -2,7 +2,7 @@
 // 🔒 Kundenmagnet Widget v2.1.0 - Mit Colorful Theme + Horizontal Scroll
 // Robuste Version für alle Plattformen (WordPress, Shopify, Wix, etc.)
 
-;(function () {
+void (function () {
   'use strict'
 
   const WIDGET_VERSION = '2.1.0'
