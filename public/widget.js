@@ -2,7 +2,7 @@
 // 🔒 Kundenmagnet Widget v2.1.0 - Mit Colorful Theme + Horizontal Scroll
 // Robuste Version für alle Plattformen (WordPress, Shopify, Wix, etc.)
 
-(function () {
+;(function () {
   'use strict'
 
   const WIDGET_VERSION = '2.1.0'
@@ -583,7 +583,7 @@
     </p>
   </div>
   <div class="powered-by">
-    Powered by <a href="https://kundenmagnet-app.de" target="_blank" rel="noopener">Kundenmagnet</a>
+    Powered by <a href="https://kundenmagnet-app.de" target="_blank" rel="noopener">Kundenmagnet-app</a>
   </div>
 </div>
         `
@@ -629,7 +629,7 @@
     ${testimonialsHtml}
   </div>
   <div class="powered-by">
-    Powered by <a href="https://kundenmagnet-app.de" target="_blank" rel="noopener">Kundenmagnet</a>
+    Powered by <a href="https://kundenmagnet-app.de" target="_blank" rel="noopener">Kundenmagnet-app</a>
   </div>
 </div>
       `
