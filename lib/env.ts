@@ -1,4 +1,4 @@
-// lib/env.ts
+// /lib/env.ts
 import { z } from 'zod'
 
 const envSchema = z.object({
@@ -17,9 +17,8 @@ const envSchema = z.object({
 
   // ============================================================================
   // Brevo Transactional Email (EU-Server: Deutschland/Frankreich)
-  // Ersetzt AWS SES
   // ============================================================================
-  BREVO_API_KEY: z.string().default(''), // Optional für Development Builds
+  BREVO_API_KEY: z.string().default(''),
   BREVO_BASE_URL: z.string().url().default('https://api.brevo.com/v3'),
   BREVO_SENDER: z
     .string()
@@ -29,7 +28,6 @@ const envSchema = z.object({
     )
     .default('Kundenmagnetapp <no-reply@kundenmagnet-app.de>'),
   BREVO_REPLY_TO: z.string().email().default('support@kundenmagnet-app.de'),
-  // Optional shared secret/token used to secure incoming Brevo webhook requests
   BREVO_WEBHOOK_TOKEN: z.string().min(8).optional(),
 
   // Security
@@ -40,6 +38,14 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+
+  // Stripe Price IDs (Products)
+  STRIPE_PRICE_ID_STARTER_MONTHLY: z.string().optional(),
+  STRIPE_PRICE_ID_PRO_MONTHLY: z.string().optional(),
+  STRIPE_PRICE_ID_BUSINESS_MONTHLY: z.string().optional(),
+  STRIPE_PRICE_ID_STARTER_YEARLY: z.string().optional(),
+  STRIPE_PRICE_ID_PRO_YEARLY: z.string().optional(),
+  STRIPE_PRICE_ID_BUSINESS_YEARLY: z.string().optional(),
 
   // QR Code defaults
   QR_DEFAULT_COLOR: z.string().default('#000000'),
@@ -57,7 +63,6 @@ let _envCache: Env | undefined
 
 export function getEnv(): Env {
   if (_envCache) return _envCache
-
   const parsed = envSchema.safeParse(process.env)
 
   if (!parsed.success) {
@@ -88,9 +93,7 @@ export function validateEnv(): void {
   const missing: string[] = []
 
   for (const varName of requiredVars) {
-    if (!process.env[varName]) {
-      missing.push(varName)
-    }
+    if (!process.env[varName]) missing.push(varName)
   }
 
   if (missing.length > 0) {
@@ -105,7 +108,6 @@ export function checkRequiredEnv(
   services: Array<'supabase' | 'brevo' | 'stripe' | 'security'>,
 ): boolean {
   const env = getEnv()
-
   const checks = {
     supabase: Boolean(
       env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -118,7 +120,6 @@ export function checkRequiredEnv(
     ),
     security: Boolean(env.IP_HASH_PEPPER && env.JWT_SECRET),
   }
-
   return services.every((service) => checks[service])
 }
 
