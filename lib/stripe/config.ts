@@ -32,8 +32,9 @@ export const STRIPE_CONFIG = {
     paymentMethodTypes: ['card', 'sepa_debit'] as const, // Karte + SEPA
     billingAddressCollection: 'required' as const, // Rechnungsadresse erforderlich
     allowPromotionCodes: true, // Gutscheincodes erlauben
-    successUrl: `${env.APP_BASE_URL}/app/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${env.APP_BASE_URL}/app/billing/canceled`,
+    // NACHHER:
+    successUrl: `${env.APP_BASE_URL}/app/abrechnung/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${env.APP_BASE_URL}/app/abrechnung/cancel`,
     phoneNumberCollection: {
       enabled: true,
     },
@@ -41,7 +42,8 @@ export const STRIPE_CONFIG = {
 
   // Customer-Portal-Konfiguration
   portal: {
-    returnUrl: `${env.APP_BASE_URL}/app/billing`,
+    // NACHHER:
+    returnUrl: `${env.APP_BASE_URL}/app/abrechnung`,
   },
 
   // Trial-Konfiguration
