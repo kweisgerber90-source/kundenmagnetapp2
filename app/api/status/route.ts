@@ -1,5 +1,5 @@
-// app/status/route.ts
-// 🔎 Systemstatus (ohne Geheimnisse): zeigt nur Booleans & Metadaten
+// app/api/status/route.ts
+// 🔎 Systemstatus (ohne Geheimnisse): nur Booleans & Metadaten
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
