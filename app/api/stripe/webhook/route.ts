@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const stripe = getStripeClient()
     event = stripe.webhooks.constructEvent(rawBody, sig, getWebhookSecret())
 
-    // Webhook-Event loggen (mit explizitem any cast für webhook_events Tabelle)
+    // Webhook-Event loggen
     await supabase.from('webhook_events').insert({
       service: 'stripe',
       event_type: event.type,
@@ -51,21 +51,10 @@ export async function POST(request: Request) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
 
-        // ✅ Kurzschluss: Einmalzahlungen (mode: "payment") ignorieren
-        // Damit fallen CLI-Trigger (stripe trigger checkout.session.completed) nicht um.
+        // ✅ Ignore one-time payments (only process subscriptions)
         if (session.mode !== 'subscription') {
-          // Optional: leichtgewichtiges Log in webhook_events (status bleibt später "completed")
-          await supabase
-            .from('webhook_events')
-            .insert({
-              service: 'stripe',
-              event_type: 'checkout.session.completed',
-              event_id: event.id,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              payload: { info: 'ignored non-subscription checkout' } as any,
-              status: 'processing',
-            })
-            .catch(() => {}) // Fehler hier bewusst geschluckt, damit Webhook nicht fehlschlägt
+          // eslint-disable-next-line no-console
+          console.log('Ignored non-subscription checkout:', session.id)
           break
         }
 
@@ -131,17 +120,11 @@ export async function POST(request: Request) {
 // ========== Event Handlers ==========
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session, sb: SupabaseClient) {
-  // ✅ Игнорируем одноразовые платежи (только подписки обрабатываем)
-  if (session.mode !== 'subscription') {
-    // eslint-disable-next-line no-console
-    console.log('Ignored non-subscription checkout:', session.id)
-    return
-  }
-
-  // 🔒 Erforderlich: user_id muss aus unserer eigenen Checkout-Erstellung kommen
+  // Require user_id from our own checkout creation
   const userId = session.metadata?.user_id
   if (!userId) {
-    // Nichts tun – Event stammt vermutlich nicht aus unserem regulären Flow
+    // eslint-disable-next-line no-console
+    console.log('No user_id in checkout session metadata')
     return
   }
 
@@ -149,7 +132,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, sb: Sup
   const subscriptionId =
     typeof session.subscription === 'string' ? session.subscription : session.subscription?.id
 
-  // Profil-Update nur, wenn eine customerId existiert
+  // Update profile only if customerId exists
   if (customerId) {
     await sb
       .from('profiles')
@@ -187,7 +170,7 @@ async function handleSubscriptionUpsert(sub: Stripe.Subscription, sb: SupabaseCl
     return
   }
 
-  // Subscription upserten (mit expliziten Typ-Casts)
+  // Subscription upserten
   await sb.from('subscriptions').upsert({
     id: sub.id,
     user_id: userId,
@@ -264,8 +247,7 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription, sb: SupabaseC
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice, sb: SupabaseClient) {
-  // Stripe Invoice hat subscription als string | Stripe.Subscription
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subscriptionId =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     typeof (invoice as any).subscription === 'string'
@@ -315,8 +297,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice, sb: SupabaseClien
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice, sb: SupabaseClient) {
-  // Stripe Invoice hat subscription als string | Stripe.Subscription
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subscriptionId =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     typeof (invoice as any).subscription === 'string'
