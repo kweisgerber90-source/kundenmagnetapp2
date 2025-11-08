@@ -48,9 +48,30 @@ export async function POST(request: Request) {
 
     // Event-Handler
     switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, supabase)
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session
+
+        // ✅ Kurzschluss: Einmalzahlungen (mode: "payment") ignorieren
+        // Damit fallen CLI-Trigger (stripe trigger checkout.session.completed) nicht um.
+        if (session.mode !== 'subscription') {
+          // Optional: leichtgewichtiges Log in webhook_events (status bleibt später "completed")
+          await supabase
+            .from('webhook_events')
+            .insert({
+              service: 'stripe',
+              event_type: 'checkout.session.completed',
+              event_id: event.id,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              payload: { info: 'ignored non-subscription checkout' } as any,
+              status: 'processing',
+            })
+            .catch(() => {}) // Fehler hier bewusst geschluckt, damit Webhook nicht fehlschlägt
+          break
+        }
+
+        await handleCheckoutCompleted(session, supabase)
         break
+      }
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
@@ -110,31 +131,39 @@ export async function POST(request: Request) {
 // ========== Event Handlers ==========
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session, sb: SupabaseClient) {
+  // 🔒 Erforderlich: user_id muss aus unserer eigenen Checkout-Erstellung kommen
   const userId = session.metadata?.user_id
-  if (!userId) return
+  if (!userId) {
+    // Nichts tun – Event stammt vermutlich nicht aus unserem regulären Flow (z. B. CLI)
+    return
+  }
 
-  const customerId = session.customer as string
-  const subscriptionId = session.subscription as string
+  // In Abo-Fällen sind diese Felder gesetzt; dennoch defensiv prüfen.
+  const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+  const subscriptionId =
+    typeof session.subscription === 'string' ? session.subscription : session.subscription?.id
 
-  // Profil aktualisieren
-  await sb
-    .from('profiles')
-    .update({
-      stripe_customer_id: customerId,
-      has_completed_onboarding: true,
-    })
-    .eq('id', userId)
+  // Profil-Update nur, wenn eine customerId existiert
+  if (customerId) {
+    await sb
+      .from('profiles')
+      .update({
+        stripe_customer_id: customerId,
+        has_completed_onboarding: true,
+      })
+      .eq('id', userId)
+  }
 
-  // Audit Log
+  // Audit Log – Felder, die fehlen könnten, nur als optional speichern
   await sb.from('audit_log').insert({
     user_id: userId,
     action: 'checkout_completed',
     resource_type: 'subscription',
     details: {
       session_id: session.id,
-      customer_id: customerId,
-      subscription_id: subscriptionId,
-      amount_total: session.amount_total,
+      customer_id: customerId ?? null,
+      subscription_id: subscriptionId ?? null,
+      amount_total: session.amount_total ?? null,
     },
   })
 }
