@@ -131,14 +131,20 @@ export async function POST(request: Request) {
 // ========== Event Handlers ==========
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session, sb: SupabaseClient) {
-  // 🔒 Erforderlich: user_id muss aus unserer eigenen Checkout-Erstellung kommen
-  const userId = session.metadata?.user_id
-  if (!userId) {
-    // Nichts tun – Event stammt vermutlich nicht aus unserem regulären Flow (z. B. CLI)
+  // ✅ Игнорируем одноразовые платежи (только подписки обрабатываем)
+  if (session.mode !== 'subscription') {
+    // eslint-disable-next-line no-console
+    console.log('Ignored non-subscription checkout:', session.id)
     return
   }
 
-  // In Abo-Fällen sind diese Felder gesetzt; dennoch defensiv prüfen.
+  // 🔒 Erforderlich: user_id muss aus unserer eigenen Checkout-Erstellung kommen
+  const userId = session.metadata?.user_id
+  if (!userId) {
+    // Nichts tun – Event stammt vermutlich nicht aus unserem regulären Flow
+    return
+  }
+
   const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
   const subscriptionId =
     typeof session.subscription === 'string' ? session.subscription : session.subscription?.id
@@ -154,7 +160,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, sb: Sup
       .eq('id', userId)
   }
 
-  // Audit Log – Felder, die fehlen könnten, nur als optional speichern
+  // Audit Log
   await sb.from('audit_log').insert({
     user_id: userId,
     action: 'checkout_completed',
