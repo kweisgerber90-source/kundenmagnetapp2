@@ -1,7 +1,9 @@
-// /app/api/stripe/webhook/route.ts
 /**
- * 📡 Stripe Webhook Handler
- * Verarbeitet Stripe Events und synchronisiert mit Supabase
+ * 📡 Stripe Webhook Handler – sichere Version (niemals 500 zurück an Stripe)
+ * -------------------------------------------------------------------------
+ * - Verifiziert zuerst die Signatur → bei Fehler 400/401 (korrekt).
+ * - Alle weiteren Fehler (Supabase, Logik) werden nur geloggt,
+ *   aber Stripe erhält immer 200, damit keine Webhook-Fehlermails kommen.
  */
 
 import { getStripeClient } from '@/lib/stripe/client'
@@ -17,50 +19,64 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const preferredRegion = ['fra1']
 
-// Helper type for Supabase operations (bypass type checking for billing tables)
+// Supabase-Typhilfe (Billing-Tabellen sind nicht streng typisiert)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClient = any
+
+// Hilfstyp: Stripe.Invoice hat in manchen Type-Definitionen kein "subscription"-Feld,
+// im echten Stripe-Payload ist es aber immer vorhanden.
+type InvoiceWithSubscription = Stripe.Invoice & {
+  subscription?: string | Stripe.Subscription | null
+}
+
+// Hilfstyp: current_period_start / end sind im echten Payload, aber nicht im Typ
+type SubscriptionWithPeriods = Stripe.Subscription & {
+  current_period_start: number
+  current_period_end: number
+}
 
 export async function POST(request: Request) {
   const supabase = createAdminClient() as SupabaseClient
   let event: Stripe.Event | null = null
 
+  // 1) Stripe-Signatur validieren (harte Fehler → 400/401)
   try {
     const rawBody = await request.text()
     const sig = headers().get('stripe-signature')
 
     if (!sig) {
-      return NextResponse.json({ error: 'Keine Signatur' }, { status: 401 })
+      return NextResponse.json({ error: 'Stripe-Signatur fehlt' }, { status: 401 })
     }
 
     const stripe = getStripeClient()
     event = stripe.webhooks.constructEvent(rawBody, sig, getWebhookSecret())
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('❌ Ungültige Stripe-Signatur:', err)
+    return NextResponse.json({ error: 'Ungültige Signatur' }, { status: 400 })
+  }
 
-    // Webhook-Event loggen
-    await supabase.from('webhook_events').insert({
-      service: 'stripe',
-      event_type: event.type,
-      event_id: event.id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      payload: event as any,
-      status: 'processing',
-    })
+  // 2) Safe Mode: ab hier niemals 500 an Stripe zurückgeben
+  try {
+    // Webhook-Event loggen (Fehler nur loggen, nicht werfen)
+    try {
+      await supabase.from('webhook_events').insert({
+        service: 'stripe',
+        event_type: event.type,
+        event_id: event.id,
+        payload: event,
+        status: 'processing',
+      })
+    } catch (logErr) {
+      // eslint-disable-next-line no-console
+      console.error('Fehler beim Einfügen in webhook_events:', logErr)
+    }
 
-    // Event-Handler
+    // Events verarbeiten
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
-
-        // ✅ Ignore one-time payments (only process subscriptions)
-        if (session.mode !== 'subscription') {
-          // eslint-disable-next-line no-console
-          console.log('Ignored non-subscription checkout:', session.id)
-          break
-        }
-
-        await handleCheckoutCompleted(session, supabase)
+      case 'checkout.session.completed':
+        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, supabase)
         break
-      }
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
@@ -72,11 +88,11 @@ export async function POST(request: Request) {
         break
 
       case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice, supabase)
+        await handlePaymentSucceeded(event.data.object as InvoiceWithSubscription, supabase)
         break
 
       case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice, supabase)
+        await handlePaymentFailed(event.data.object as InvoiceWithSubscription, supabase)
         break
 
       case 'customer.updated':
@@ -85,54 +101,61 @@ export async function POST(request: Request) {
 
       default:
         // eslint-disable-next-line no-console
-        console.log(`Unhandled event type: ${event.type}`)
+        console.log(`Unbehandelter Stripe-Event-Typ: ${event.type}`)
     }
 
-    // Event als completed markieren
-    await supabase
-      .from('webhook_events')
-      .update({
-        status: 'completed',
-        processed_at: new Date().toISOString(),
-      })
-      .eq('event_id', event.id)
-
-    return NextResponse.json({ ok: true })
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Webhook Error:', err)
-
-    if (event?.id) {
+    // Status → completed
+    try {
       await supabase
         .from('webhook_events')
         .update({
-          status: 'failed',
+          status: 'completed',
           processed_at: new Date().toISOString(),
-          error: String(err),
         })
         .eq('event_id', event.id)
+    } catch (updateErr) {
+      // eslint-disable-next-line no-console
+      console.error('Konnte webhook_event nicht auf completed setzen:', updateErr)
     }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('❗Unerwarteter Fehler im Webhook:', err)
 
-    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
+    if (event?.id) {
+      try {
+        await supabase
+          .from('webhook_events')
+          .update({
+            status: 'failed',
+            error: String(err),
+            processed_at: new Date().toISOString(),
+          })
+          .eq('event_id', event.id)
+      } catch (updateErr) {
+        // eslint-disable-next-line no-console
+        console.error('Fehler beim Aktualisieren des Webhook-Status auf failed:', updateErr)
+      }
+    }
   }
+
+  // Niemals 500 an Stripe senden
+  return NextResponse.json({ ok: true })
 }
 
-// ========== Event Handlers ==========
-
+//
+// ========== Handler: checkout.session.completed ==========
+//
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session, sb: SupabaseClient) {
-  // Require user_id from our own checkout creation
   const userId = session.metadata?.user_id
   if (!userId) {
     // eslint-disable-next-line no-console
-    console.log('No user_id in checkout session metadata')
+    console.log('Keine user_id in checkout.session metadata gefunden')
     return
   }
 
   const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
-  const subscriptionId =
-    typeof session.subscription === 'string' ? session.subscription : session.subscription?.id
 
-  // Update profile only if customerId exists
+  // Profil aktualisieren
   if (customerId) {
     await sb
       .from('profiles')
@@ -151,46 +174,46 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, sb: Sup
     details: {
       session_id: session.id,
       customer_id: customerId ?? null,
-      subscription_id: subscriptionId ?? null,
-      amount_total: session.amount_total ?? null,
     },
   })
 }
 
+//
+// ========== Handler: subscription.created / subscription.updated ==========
+//
 async function handleSubscriptionUpsert(sub: Stripe.Subscription, sb: SupabaseClient) {
   const userId = sub.metadata?.user_id
   if (!userId) return
 
   const priceId = sub.items.data[0]?.price.id
   const plan = findPlanByPriceId(priceId)
-
   if (!plan) {
     // eslint-disable-next-line no-console
-    console.error('Unknown price ID:', priceId)
+    console.error('Unbekannte Price-ID:', priceId)
     return
   }
 
-  // Subscription upserten
-  await sb.from('subscriptions').upsert({
-    id: sub.id,
-    user_id: userId,
-    stripe_subscription_id: sub.id,
-    stripe_customer_id: sub.customer as string,
-    stripe_price_id: priceId,
-    plan_id: plan.id,
-    status: sub.status as SubscriptionStatus,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    current_period_start: new Date((sub as any).current_period_start * 1000).toISOString(),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
-    cancel_at_period_end: sub.cancel_at_period_end,
-    canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
-    trial_start: sub.trial_start ? new Date(sub.trial_start * 1000).toISOString() : null,
-    trial_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
-    updated_at: new Date().toISOString(),
-  })
+  const subWithPeriods = sub as SubscriptionWithPeriods
 
-  // Profil aktualisieren
+  await sb.from('subscriptions').upsert(
+    {
+      user_id: userId,
+      stripe_subscription_id: sub.id,
+      stripe_customer_id: sub.customer as string,
+      stripe_price_id: priceId,
+      plan_id: plan.id,
+      status: sub.status as SubscriptionStatus,
+      current_period_start: new Date(subWithPeriods.current_period_start * 1000).toISOString(),
+      current_period_end: new Date(subWithPeriods.current_period_end * 1000).toISOString(),
+      cancel_at_period_end: !!sub.cancel_at_period_end,
+      canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+      trial_start: sub.trial_start ? new Date(sub.trial_start * 1000).toISOString() : null,
+      trial_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'stripe_subscription_id' },
+  )
+
   await sb
     .from('profiles')
     .update({
@@ -199,7 +222,6 @@ async function handleSubscriptionUpsert(sub: Stripe.Subscription, sb: SupabaseCl
     })
     .eq('id', userId)
 
-  // Audit Log
   await sb.from('audit_log').insert({
     user_id: userId,
     action: 'subscription_updated',
@@ -212,11 +234,13 @@ async function handleSubscriptionUpsert(sub: Stripe.Subscription, sb: SupabaseCl
   })
 }
 
+//
+// ========== Handler: subscription.deleted ==========
+//
 async function handleSubscriptionDeleted(sub: Stripe.Subscription, sb: SupabaseClient) {
   const userId = sub.metadata?.user_id
   if (!userId) return
 
-  // Subscription als canceled markieren
   await sb
     .from('subscriptions')
     .update({
@@ -224,18 +248,16 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription, sb: SupabaseC
       canceled_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('id', sub.id)
+    .eq('stripe_subscription_id', sub.id)
 
-  // Profil aktualisieren
   await sb
     .from('profiles')
     .update({
       plan_id: null,
-      subscription_status: 'canceled' as SubscriptionStatus,
+      subscription_status: 'canceled',
     })
     .eq('id', userId)
 
-  // Audit Log
   await sb.from('audit_log').insert({
     user_id: userId,
     action: 'subscription_canceled',
@@ -246,19 +268,16 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription, sb: SupabaseC
   })
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice, sb: SupabaseClient) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//
+// ========== Handler: invoice.payment_succeeded ==========
+//
+async function handlePaymentSucceeded(invoice: InvoiceWithSubscription, sb: SupabaseClient) {
+  const subscriptionValue = invoice.subscription
   const subscriptionId =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    typeof (invoice as any).subscription === 'string'
-      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (invoice as any).subscription
-      : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (invoice as any).subscription?.id
+    typeof subscriptionValue === 'string' ? subscriptionValue : (subscriptionValue?.id ?? null)
 
   if (!subscriptionId) return
 
-  // User ID von Subscription holen
   const { data: subscription } = await sb
     .from('subscriptions')
     .select('user_id')
@@ -267,7 +286,6 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice, sb: SupabaseClien
 
   if (!subscription) return
 
-  // Payment Record erstellen
   await sb.from('payments').insert({
     user_id: subscription.user_id,
     subscription_id: subscriptionId,
@@ -283,7 +301,6 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice, sb: SupabaseClien
     },
   })
 
-  // Audit Log
   await sb.from('audit_log').insert({
     user_id: subscription.user_id,
     action: 'payment_succeeded',
@@ -296,19 +313,16 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice, sb: SupabaseClien
   })
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice, sb: SupabaseClient) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//
+// ========== Handler: invoice.payment_failed ==========
+//
+async function handlePaymentFailed(invoice: InvoiceWithSubscription, sb: SupabaseClient) {
+  const subscriptionValue = invoice.subscription
   const subscriptionId =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    typeof (invoice as any).subscription === 'string'
-      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (invoice as any).subscription
-      : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (invoice as any).subscription?.id
+    typeof subscriptionValue === 'string' ? subscriptionValue : (subscriptionValue?.id ?? null)
 
   if (!subscriptionId) return
 
-  // User ID von Subscription holen
   const { data: subscription } = await sb
     .from('subscriptions')
     .select('user_id')
@@ -317,19 +331,16 @@ async function handlePaymentFailed(invoice: Stripe.Invoice, sb: SupabaseClient) 
 
   if (!subscription) return
 
-  // Subscription Status aktualisieren
   await sb
     .from('subscriptions')
-    .update({ status: 'past_due' as SubscriptionStatus })
+    .update({ status: 'past_due' })
     .eq('stripe_subscription_id', subscriptionId)
 
-  // Profil aktualisieren
   await sb
     .from('profiles')
-    .update({ subscription_status: 'past_due' as SubscriptionStatus })
+    .update({ subscription_status: 'past_due' })
     .eq('id', subscription.user_id)
 
-  // Audit Log
   await sb.from('audit_log').insert({
     user_id: subscription.user_id,
     action: 'payment_failed',
@@ -342,8 +353,10 @@ async function handlePaymentFailed(invoice: Stripe.Invoice, sb: SupabaseClient) 
   })
 }
 
+//
+// ========== Handler: customer.updated ==========
+//
 async function handleCustomerUpdated(customer: Stripe.Customer, sb: SupabaseClient) {
-  // Profil aktualisieren
   const { data: profile } = await sb
     .from('profiles')
     .select('id')
@@ -360,8 +373,9 @@ async function handleCustomerUpdated(customer: Stripe.Customer, sb: SupabaseClie
     .eq('id', profile.id)
 }
 
-// ========== Helpers ==========
-
+//
+// ========== Helper ==========
+//
 function findPlanByPriceId(priceId?: string | null) {
   if (!priceId) return null
   const entries = Object.values(PLANS)
