@@ -136,7 +136,7 @@ export function CampaignList({ campaigns }: CampaignListProps) {
                   <div>
                     <span className="text-gray-600">Testimonials:</span>{' '}
                     <span className="font-medium text-gray-900">
-                      {campaign.testimonial_count ?? 0}
+                      {campaign.testimonials?.total ?? 0}
                     </span>
                   </div>
                   <div>

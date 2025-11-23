@@ -1,20 +1,45 @@
 // /lib/types/campaign.ts
 // Zentrale Typen für Kampagnen (Server/Client gemeinsam nutzbar)
 
+import type { QRCodeStats } from './qr'
+import type { TestimonialStats } from './testimonial'
+
 export type CampaignStatus = 'active' | 'paused' | 'archived'
 
-// ⚠️ Supabase gibt Zeitstempel/UUIDs im Client-Kontext in der Regel als string zurück
+/**
+ * Campaign Type (basiert auf supabase.sql Schema)
+ */
 export interface Campaign {
   id: string
   user_id: string
   name: string
-  slug: string | null
+  slug: string
   status: CampaignStatus
   created_at: string
-  updated_at?: string | null
 }
 
+/**
+ * Campaign with calculated statistics
+ */
 export interface CampaignWithStats extends Campaign {
-  // 🔧 Optional, bis echte Aggregation/Counts vorhanden sind
-  testimonial_count?: number
+  testimonials?: TestimonialStats
+  qrCodes?: QRCodeStats
+}
+
+/**
+ * Campaign Create Payload (für API POST)
+ */
+export interface CampaignCreatePayload {
+  name: string
+  slug: string
+  status?: CampaignStatus
+}
+
+/**
+ * Campaign Update Payload (für API PATCH)
+ */
+export interface CampaignUpdatePayload {
+  name?: string
+  slug?: string
+  status?: CampaignStatus
 }
