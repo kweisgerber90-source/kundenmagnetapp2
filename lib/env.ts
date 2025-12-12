@@ -55,6 +55,8 @@ const envSchema = z.object({
   RATE_LIMIT_ENABLED: z.coerce.boolean().default(true),
   RATE_LIMIT_REQUESTS: z.coerce.number().default(100),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
+
+  ADMIN_USER_IDS: z.string().optional(),
 })
 
 export type Env = z.infer<typeof envSchema>

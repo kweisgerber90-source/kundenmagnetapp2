@@ -38,3 +38,4 @@ export function createAdminClient() {
  * Alias für bessere Lesbarkeit
  */
 export const createClient = createAdminClient
+export const createServiceClient = createAdminClient
