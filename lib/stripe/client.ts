@@ -93,6 +93,7 @@ export async function createCheckoutSession(params: {
   planId: string
   userId: string
   trialDays?: number
+  couponId?: string
 }): Promise<Stripe.Checkout.Session> {
   const stripe = getStripeClient()
 
@@ -106,6 +107,7 @@ export async function createCheckoutSession(params: {
       metadata: { user_id: params.userId, plan_id: params.planId },
     },
     metadata: { user_id: params.userId, plan_id: params.planId },
+    ...(params.couponId ? { coupon: params.couponId } : {}),
     allow_promotion_codes: true,
     billing_address_collection: 'required',
     phone_number_collection: { enabled: true },

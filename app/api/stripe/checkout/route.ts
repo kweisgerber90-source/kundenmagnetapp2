@@ -93,6 +93,7 @@ export async function POST(request: Request) {
       planId: plan.id,
       userId: user.id,
       trialDays: TRIAL_DAYS,
+      couponId: coupon,
     })
 
     // Audit Log
