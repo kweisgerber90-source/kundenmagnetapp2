@@ -1,3 +1,5 @@
+// /app/pricing/page.tsx
+import { PlanComparisonTable } from '@/components/plan-comparison-table'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -54,10 +56,11 @@ export default function PricingPage() {
                 </div>
                 <p className="mt-1 text-xs text-gray-500">zzgl. 19% MwSt. (10,71 € inkl. MwSt.)</p>
               </div>
+
               <ul className="space-y-3">
                 <li className="flex items-start">
                   <Check className="mr-2 mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
-                  <span className="text-sm">1 Kampagne</span>
+                  <span className="text-sm">Bis zu 2 Kampagnen</span>
                 </li>
                 <li className="flex items-start">
                   <Check className="mr-2 mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
@@ -98,6 +101,7 @@ export default function PricingPage() {
                 </div>
                 <p className="mt-1 text-xs text-gray-500">zzgl. 19% MwSt. (22,61 € inkl. MwSt.)</p>
               </div>
+
               <ul className="space-y-3">
                 <li className="flex items-start">
                   <Check className="mr-2 mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
@@ -149,6 +153,7 @@ export default function PricingPage() {
                 </div>
                 <p className="mt-1 text-xs text-gray-500">zzgl. 19% MwSt. (46,41 € inkl. MwSt.)</p>
               </div>
+
               <ul className="space-y-3">
                 <li className="flex items-start">
                   <Check className="mr-2 mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
@@ -178,6 +183,45 @@ export default function PricingPage() {
               </Button>
             </CardFooter>
           </Card>
+        </div>
+
+        {/* Feature Comparison Matrix */}
+        <div className="mx-auto mt-16 max-w-6xl">
+          <div className="mb-8 text-center">
+            <h2 className="mb-3 text-3xl font-bold text-gray-900">
+              Detaillierter Feature-Vergleich
+            </h2>
+            <p className="text-lg text-gray-600">
+              Alle Features auf einen Blick – finden Sie den perfekten Plan für Ihr Unternehmen
+            </p>
+          </div>
+
+          <PlanComparisonTable />
+
+          {/* Zusätzliche Hinweise */}
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+              <h4 className="mb-2 font-semibold text-blue-900">✨ 14 Tage kostenlos testen</h4>
+              <p className="text-sm text-blue-800">
+                Alle Pläne können 14 Tage lang unverbindlich getestet werden. Keine Kreditkarte
+                erforderlich.
+              </p>
+            </div>
+            <div className="rounded-lg border border-green-100 bg-green-50 p-4">
+              <h4 className="mb-2 font-semibold text-green-900">🔄 Jederzeit wechseln</h4>
+              <p className="text-sm text-green-800">
+                Sie können Ihren Plan jederzeit upgraden oder downgraden. Die Abrechnung wird
+                anteilig angepasst.
+              </p>
+            </div>
+            <div className="rounded-lg border border-purple-100 bg-purple-50 p-4">
+              <h4 className="mb-2 font-semibold text-purple-900">📞 Support inklusive</h4>
+              <p className="text-sm text-purple-800">
+                Alle Pläne beinhalten E-Mail Support auf Deutsch. Business-Kunden erhalten Priority
+                Support.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* VAT Info Section */}
