@@ -7,6 +7,9 @@
 // - Debug-Modus: ?debug=1 gibt Klartext-Fehler zurück
 // -----------------------------------------------------------------------------
 
+import { BillingGuard } from '@/lib/billing/guard'
+import { trackQRScan } from '@/lib/billing/usage'
+import { getEnv } from '@/lib/env'
 import { hashIP } from '@/lib/security-utils'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
@@ -23,11 +26,13 @@ type QrCodeWithCampaign =
   | {
       id: string
       public_id: string
+      user_id: string
       campaigns: Campaign | null
     }
   | {
       id: string
       public_id: string
+      user_id: string
       campaigns: Campaign[] | null
     }
 
@@ -52,24 +57,25 @@ function extractSlug(row: QrCodeWithCampaign): string | undefined {
 export async function GET(req: NextRequest, { params }: { params: { publicId: string } }) {
   const debug = req.nextUrl.searchParams.get('debug') === '1'
 
-  // 1) ENV prüfen
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!SUPABASE_URL || !SUPABASE_ANON) {
-    const msg = `ENV fehlt: NEXT_PUBLIC_SUPABASE_URL=${!!SUPABASE_URL} NEXT_PUBLIC_SUPABASE_ANON_KEY=${!!SUPABASE_ANON}`
+  // 1) ENV prüfen (Service Role für serverseitige Logs & Limits)
+  const env = getEnv()
+  const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL
+  const SUPABASE_SERVICE = env.SUPABASE_SERVICE_ROLE_KEY
+  if (!SUPABASE_URL || !SUPABASE_SERVICE) {
+    const msg = `ENV fehlt: NEXT_PUBLIC_SUPABASE_URL=${!!SUPABASE_URL} SUPABASE_SERVICE_ROLE_KEY=${!!SUPABASE_SERVICE}`
     if (debug) return NextResponse.json({ error: 'config', reason: msg }, { status: 500 })
     return NextResponse.redirect(new URL(`/app/qr?err=config`, req.url), { status: 302 })
   }
 
   try {
-    // 2) Supabase-Client (anon)
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON)
+    // 2) Supabase-Client (service role)
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE)
 
     // 3) QR-Datensatz inkl. campaigns.slug holen
     //    Hinweis: Supabase kann relationale Felder als Array zurückgeben.
     const { data, error: qrErr } = await supabase
       .from('qr_codes')
-      .select('id, public_id, campaigns ( slug )')
+      .select('id, public_id, user_id, campaigns ( slug )')
       .eq('public_id', params.publicId)
       .maybeSingle()
 
@@ -89,6 +95,29 @@ export async function GET(req: NextRequest, { params }: { params: { publicId: st
       return NextResponse.redirect(new URL(`/app/qr?err=missing_slug`, req.url), { status: 302 })
     }
 
+    // 🛡 Billing-Guard: QR-Scan Limit prüfen (Plan des QR-Inhabers)
+    const origin = req.nextUrl.origin
+    const ownerId = (qr as unknown as { user_id?: string }).user_id
+    if (ownerId) {
+      const guard = await BillingGuard.fromUser(ownerId)
+      if (guard) {
+        const canScan = await guard.canMakeQRScan()
+        if (!canScan.allowed) {
+          // 🔧 Korrektur: Kein Redirect zu nicht existierender Seite; stattdessen Pricing mit Hinweis
+          const targetLimit = new URL('/pricing', origin)
+          targetLimit.searchParams.set('reason', 'qr_limit')
+          return NextResponse.redirect(targetLimit, { status: 302 })
+        }
+
+        // 🔧 Korrektur: Usage-Tracking darf den Redirect niemals blockieren (best-effort)
+        try {
+          await trackQRScan(ownerId, (qr as unknown as { id: string }).id)
+        } catch {
+          // Ignorieren: Tracking-Fehler sind kein Blocker für Redirect
+        }
+      }
+    }
+
     // 5) Anonymen Scan loggen (Fehler ignorieren)
     try {
       const ip = getClientIP(req.headers)
@@ -105,7 +134,6 @@ export async function GET(req: NextRequest, { params }: { params: { publicId: st
     }
 
     // 6) Ziel-URL bauen
-    const origin = req.nextUrl.origin
     const target = new URL(`/r/${encodeURIComponent(slug)}`, origin)
     target.searchParams.set('utm_source', 'qr')
     target.searchParams.set('utm_medium', 'offline')

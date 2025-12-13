@@ -1,6 +1,7 @@
 // app/app/qr/new/page.tsx
 'use client'
 
+import { useLimitDialog } from '@/components/billing/limit-reached-dialog' // 🔧 Korrektur: Limit-Dialog bei LIMIT_EXCEEDED
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,6 +30,7 @@ export default function NewQRPage() {
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
+  const { show: showLimitDialog } = useLimitDialog()
 
   const [formData, setFormData] = useState({
     campaign_id: '',
@@ -88,14 +90,33 @@ export default function NewQRPage() {
       })
 
       if (!response.ok) {
-        throw new Error('QR-Code konnte nicht erstellt werden')
+        const payload = (await response.json().catch(() => ({}))) as {
+          error?: string
+          code?: string
+          current?: number
+          limit?: number
+          planId?: string
+        }
+
+        // 🔧 Korrektur: QR-Code Limit sauber behandeln (statt generischer Alert)
+        if (payload.code === 'LIMIT_EXCEEDED') {
+          showLimitDialog({
+            limitType: 'qr_codes',
+            current: typeof payload.current === 'number' ? payload.current : 0,
+            limit: typeof payload.limit === 'number' ? payload.limit : 0,
+            currentPlan: payload.planId || 'starter',
+          })
+          return
+        }
+
+        throw new Error(payload.error ?? 'QR-Code konnte nicht erstellt werden')
       }
 
       const data = await response.json()
       router.push(`/app/qr/${data.id}`)
     } catch (err) {
       console.error('Fehler beim Erstellen:', err)
-      alert('Fehler beim Erstellen des QR-Codes')
+      alert(err instanceof Error ? err.message : 'Fehler beim Erstellen des QR-Codes')
     } finally {
       setSubmitting(false)
     }

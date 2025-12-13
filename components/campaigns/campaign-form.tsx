@@ -9,6 +9,7 @@
 
 'use client'
 
+import { useLimitDialog } from '@/components/billing/limit-reached-dialog' // 🔧 Korrektur: Limit-Dialog bei LIMIT_EXCEEDED
 import type { Campaign, CampaignStatus } from '@/lib/types/campaign'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -28,6 +29,7 @@ export function CampaignForm({ campaign, onSaved }: CampaignFormProps) {
   const [saving, setSaving] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { show: showLimitDialog } = useLimitDialog()
 
   // 🔧 Einfache Badge-Darstellung für Status (nur UI)
   const StatusBadge = ({ value }: { value: CampaignStatus }) => {
@@ -63,10 +65,30 @@ export function CampaignForm({ campaign, onSaved }: CampaignFormProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, slug: slug || undefined }),
         })
+
         if (!res.ok) {
-          const payload = (await res.json().catch(() => ({}))) as { error?: string }
+          const payload = (await res.json().catch(() => ({}))) as {
+            error?: string
+            code?: string
+            current?: number
+            limit?: number
+            planId?: string
+          }
+
+          // 🔧 Korrektur: Plan-Limit sauber behandeln (statt generischer Fehlerbox)
+          if (payload.code === 'LIMIT_EXCEEDED') {
+            showLimitDialog({
+              limitType: 'campaigns',
+              current: typeof payload.current === 'number' ? payload.current : 0,
+              limit: typeof payload.limit === 'number' ? payload.limit : 0,
+              currentPlan: payload.planId || 'starter',
+            })
+            return
+          }
+
           throw new Error(payload.error ?? 'Unbekannter Fehler beim Erstellen')
         }
+
         const payload = (await res.json()) as { campaign: Campaign }
         onSaved?.(payload.campaign)
       } else {
@@ -80,10 +102,12 @@ export function CampaignForm({ campaign, onSaved }: CampaignFormProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         })
+
         if (!res.ok) {
           const payload = (await res.json().catch(() => ({}))) as { error?: string }
           throw new Error(payload.error ?? 'Unbekannter Fehler beim Speichern')
         }
+
         const payload = (await res.json()) as { campaign: Campaign }
         onSaved?.(payload.campaign)
       }
@@ -190,12 +214,6 @@ export function CampaignForm({ campaign, onSaved }: CampaignFormProps) {
 
       {/* Aktionen */}
       <div className="flex items-center justify-end gap-2 pt-2">
-        {/* Sekundär-Button (Abbrechen) – nur sinnvoll, wenn form modal ist.
-            Lässt sich bei Bedarf via Props aktivieren. */}
-        {/* <button type="button" className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-          Abbrechen
-        </button> */}
-
         <button
           type="submit"
           disabled={saving}

@@ -2,6 +2,7 @@
 // 🔐 Authentifiziertes Erstellen von QR-Codes inkl. Upload in Storage-Bucket 'qr-codes'.
 // 🔧 Korrektur: Bestehenden Bucket-Namen beibehalten (kein neuer 'qr').
 
+import { BillingGuard } from '@/lib/billing/guard' // 🔧 Korrektur: Einheitliche Limit-Logik + Payload für UI
 import { getEnv } from '@/lib/env'
 import {
   generateQRCodePNG,
@@ -39,8 +40,9 @@ export async function POST(req: NextRequest) {
 
     const body: CreateQRRequest = await req.json()
     const { campaign_id, title, design = {}, utm_source, utm_medium, utm_campaign } = body
-    if (!campaign_id || !title)
+    if (!campaign_id || !title) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
 
     // 🔍 Design validieren
     const check = validateQRDesign(design)
@@ -62,13 +64,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    // 🔒 Plan-Limit prüfen
-    const { data: limitOk, error: limitErr } = await admin.rpc('check_plan_limit', {
-      p_user_id: user.id,
-      p_limit_type: 'qr_codes',
-    })
-    if (limitErr || !limitOk) {
-      return NextResponse.json({ error: 'QR code limit reached' }, { status: 403 })
+    // 🔒 Plan-Limit prüfen (QR-Codes)
+    // 🔧 Korrektur: Nicht nur boolean (RPC), sondern strukturierte Daten für UI (code/current/limit/planId)
+    const guard = await BillingGuard.fromUser(user.id)
+    if (!guard) {
+      return NextResponse.json({ error: 'Billing guard init failed' }, { status: 500 })
+    }
+
+    const limitCheck = await guard.canCreateQRCode()
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: limitCheck.message ?? 'QR code limit reached',
+          code: 'LIMIT_EXCEEDED',
+          current: typeof limitCheck.current === 'number' ? limitCheck.current : 0,
+          limit: typeof limitCheck.limit === 'number' ? limitCheck.limit : 0,
+          planId: guard.getPlanId(),
+        },
+        { status: 403 },
+      )
     }
 
     const public_id = genPublicId()
@@ -100,6 +114,7 @@ export async function POST(req: NextRequest) {
         .from('qr-codes')
         .upload(pngPath, png, { contentType: 'image/png', upsert: false }),
     ])
+
     if (upSvg.error || upPng.error) {
       console.error('[qr] Storage upload error:', upSvg.error || upPng.error)
       return NextResponse.json({ error: 'Failed to upload QR files' }, { status: 500 })
@@ -137,7 +152,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to save QR code' }, { status: 500 })
     }
 
-    // 📝 Audit-Event (best effort, ohne .catch() am Builder)
+    // 📝 Audit-Event (best effort)
     const { error: auditErr } = await admin.from('audit_log').insert({
       actor: user.id,
       action: 'create_qr_code',

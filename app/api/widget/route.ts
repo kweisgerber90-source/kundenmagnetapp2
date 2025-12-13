@@ -1,10 +1,13 @@
 // /app/api/widget/route.ts
 // Public API für Widget-Testimonials (CORS enabled)
 
+import { BillingGuard } from '@/lib/billing/guard'
+import { trackWidgetRequest } from '@/lib/billing/usage'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'edge'
+export const preferredRegion = ['fra1']
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -53,6 +56,32 @@ export async function GET(request: NextRequest) {
         { error: 'Kampagne nicht gefunden oder deaktiviert' },
         { status: 404, headers },
       )
+    }
+
+    // 🛡 Billing-Guard: Widget-Request Limit prüfen (Plan des Kampagnen-Inhabers)
+    const guard = await BillingGuard.fromUser(campaignData.user_id)
+    if (guard) {
+      const canRequest = await guard.canMakeWidgetRequest()
+      if (!canRequest.allowed) {
+        return NextResponse.json(
+          {
+            error: canRequest.message || 'Widget-Limit erreicht. Bitte upgraden.',
+            code: 'LIMIT_EXCEEDED',
+            current: canRequest.current,
+            limit: canRequest.limit,
+            planId: guard.getPlanId(),
+          },
+          { status: 429, headers },
+        )
+      }
+
+      // 📊 Usage Tracking (best-effort)
+      // 🔧 Korrektur: Tracking darf Widget-Ausgabe nicht blockieren
+      try {
+        await trackWidgetRequest(campaignData.user_id, campaignData.id)
+      } catch (e) {
+        console.warn('[Widget API] Usage tracking warn:', e)
+      }
     }
 
     // Testimonials abrufen (nur approved, RLS-Policy erlaubt public read)
